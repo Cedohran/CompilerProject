@@ -25,7 +25,8 @@ public class AstCreator {
     AstNode exprTree,
             paramTree, afactorTree, atermTree, aexprTree,
             bfactorTree, bcompTree, btermTree, bexprTree,
-            cmpSmblAExprLeftTree, cmpSmblAExprRightTree;
+            cmpSmblAExprLeftTree, cmpSmblAExprRightTree,
+            opAddLeftTree, opAddRightTree;
 
 
     //func
@@ -160,8 +161,11 @@ public class AstCreator {
     }
 
     //aexpr TODO: operator node to root
+    void opAddLeft(){
+        opAddLeftTree = aexprTree;
+    }
     void opAdd() {
-        aexprTree = new AstNode(List.of(aexprTree, new AstNode("+", AstNodeType.OP), atermTree), "aexpr");
+        aexprTree = new AstNode(List.of(opAddLeftTree, new AstNode("+", AstNodeType.OP), atermTree), "aexpr");
     }
     void opSub() {
         aexprTree = new AstNode(List.of(aexprTree, new AstNode("-", AstNodeType.OP), atermTree), "aexpr");

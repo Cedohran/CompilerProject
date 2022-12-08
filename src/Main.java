@@ -16,12 +16,18 @@ public class Main {
 
         GoParser parser = new GoParser( tokens );
         ParseTree tree = parser.program();
-        System.out.println(tree.toStringTree());
+        ParseTreeWalker walker = new ParseTreeWalker();
+        //System.out.println(tree.toStringTree());
 
         GoVisitor visitor = new GoVisitor();
-        ParseTreeWalker walker = new ParseTreeWalker();
         walker.walk(visitor, tree);
-        System.out.println(parser.creator.programTree.toString());
+
+        GoVisitorAstCreator creator =  new GoVisitorAstCreator();
+        walker.walk(creator, tree);
+        System.out.println(creator.ast.toString());
+
+
+        //System.out.println(parser.creator.programTree.toString());
 
 //        visitor.varMap.forEach((k, v) -> {
 //            System.out.println("ID: "+k+" Type: "+v.getName());

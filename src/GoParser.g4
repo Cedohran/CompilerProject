@@ -123,7 +123,7 @@ bfactor:
 
 //arithmetic expression
 aexpr:
-        aexpr OP_ADD aterm {creator.opAdd();}
+        aexpr {creator.opAddLeft();} OP_ADD aterm {creator.opAdd();}
         | aexpr OP_SUB aterm {creator.opSub();}
         | aterm {creator.aTerm();};
 aterm:
@@ -137,6 +137,14 @@ afactor:
         | optws SNTX_PARANT_L aexpr SNTX_PARANT_R optws {creator.parantAExpr();}
         | optws expr_param optws {creator.exprParam();} ;
 
+//indirect terminal rules
+expr_param:
+        LIT_INT {creator.litInt(_localctx);}
+        | LIT_FLOAT {creator.litFloat(_localctx);}
+        | LIT_STR {creator.litStr(_localctx);}
+        | LIT_BOOL {creator.litBool(_localctx);}
+        | ID {creator.exprParamID(_localctx);}
+        | func_invoc {creator.funcInvocExprParam();} ;
 
 //whitespaces / newlines
 ws:
@@ -153,14 +161,6 @@ optnl:
         | ;
 
 
-//indirect terminal rules
-expr_param:
-        LIT_INT {creator.litInt(_localctx);}
-        | LIT_FLOAT {creator.litFloat(_localctx);}
-        | LIT_STR {creator.litStr(_localctx);}
-        | LIT_BOOL {creator.litBool(_localctx);}
-        | ID {creator.exprParamID(_localctx);}
-        | func_invoc {creator.funcInvocExprParam();} ;
 
 
 
