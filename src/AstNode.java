@@ -27,6 +27,13 @@ public class AstNode {
         this.type = AstNodeType.NON_TERMINAL;
     }
 
+    public AstNode(List<AstNode> children, String value, AstNodeType type) {
+        this.value = value;
+        this.children = new ArrayList<>();
+        this.children.addAll(children);
+        this.type = type;
+    }
+
     public DataType getDataType() {
         return null;
     }

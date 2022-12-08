@@ -37,13 +37,13 @@ instruction: //TODO: Frage zu newlines
         | ;
 
 instruction_dec:
-        if_statement {creator.ifStatement();}
-        | for_loop {creator.forLoop();}
+        {creator.ifStatementEnter();} if_statement {creator.ifStatementExit();}
+        | {creator.forLoopEnter();} for_loop {creator.forLoopExit();}
         | var_init {creator.varInit(_localctx);}
         | var_assign {creator.varAssign(_localctx);}
         | func_invoc {creator.funcInvoc();}
-        | func_return {creator.funcReturn();}
-        | expr {creator.expr();} ;
+        | func_return {creator.funcReturn();} ;
+        //| expr {creator.expr();} ;
 
 
 //functions
@@ -96,7 +96,7 @@ else_statement:
 
 //for loop
 for_loop:
-        KEY_FOR expr instruction_block ;
+        KEY_FOR bexpr {creator.forLoopBExpr();} instruction_block {creator.forLoopBlock();} ;
 
 
 //expressions
@@ -160,7 +160,7 @@ expr_param:
         | LIT_STR {creator.litStr(_localctx);}
         | LIT_BOOL {creator.litBool(_localctx);}
         | ID {creator.exprParamID(_localctx);}
-        | func_invoc ;
+        | func_invoc {creator.funcInvocExprParam();} ;
 
 
 

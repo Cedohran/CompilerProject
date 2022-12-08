@@ -4,15 +4,23 @@ import java.util.List;
 public class AstCreator {
     //prog tree
     AstNode programTree = new AstNode("program", AstNodeType.NON_TERMINAL);
+
     //func trees
     AstNode funcInvocTree, funcReturnTree;
+
     //if / for trees
-    AstNode forTree, ifTree, elseTree;
+    //recursive counter and arrays
+    int ifElseCounter = -1, forLoopCounter = -1;
+    ArrayList<AstNode> ifStatementTree = new ArrayList<>(), elseStatementTree = new ArrayList<>(),
+            forLoopTree = new ArrayList<>();
+
     //instruction trees
-    int recCounter = -1;
-    ArrayList<AstNode> instDecTrees = new ArrayList<>();
     AstNode instructionBlockTree,
             varInitTree, varAssignTree;
+    //recursive counter and arrays
+    int instBlockCounter = -1;
+    ArrayList<AstNode> instDecTrees = new ArrayList<>();
+
     //expression trees
     AstNode exprTree,
             paramTree, afactorTree, atermTree, aexprTree,
@@ -31,27 +39,40 @@ public class AstCreator {
 
     //instruction_block -> copy whole block to instructionBlockTree and reset instDecTree for other block
     void instructionBlockEnter() {
-        recCounter++;
+        instBlockCounter++;
         instDecTrees.add(new AstNode("instruction_dec", AstNodeType.NON_TERMINAL));
     }
     void instructionBlockExit() {
-        instructionBlockTree = new AstNode(instDecTrees.get(recCounter).children, "instruction_block");
-        instDecTrees.remove(recCounter);
-        recCounter--;
+        instructionBlockTree = new AstNode(instDecTrees.get(instBlockCounter).children, "instruction_block");
+        instDecTrees.remove(instBlockCounter);
+        instBlockCounter--;
     }
 
     //instruction_dec -> gather all instructions in one instruction_block
     //indirect
-    void ifStatement() {
-        if(elseTree != null) {
-            ifTree.addChild(elseTree);
-        }
-        instDecTrees.get(recCounter).addChild(ifTree);
+    void ifStatementEnter() {
+        ifElseCounter++;
+        ifStatementTree.add(new AstNode("if_statement", AstNodeType.NON_TERMINAL));
+        elseStatementTree.add(null);
     }
-    //direct
-    void forLoop() {
-        forTree = new AstNode(List.of(exprTree, instructionBlockTree), "for_loop");
-        instDecTrees.get(recCounter).addChild(forTree);
+    void ifStatementExit() {
+        if(elseStatementTree.get(ifElseCounter) != null) {
+            ifStatementTree.get(ifElseCounter).addChild(elseStatementTree.get(ifElseCounter));
+        }
+        instDecTrees.get(instBlockCounter).addChild(ifStatementTree.get(ifElseCounter));
+        ifStatementTree.remove(ifElseCounter);
+        elseStatementTree.remove(ifElseCounter);
+        ifElseCounter--;
+    }
+    //indirect
+    void forLoopEnter() {
+        forLoopCounter++;
+        forLoopTree.add(new AstNode("for_loop", AstNodeType.NON_TERMINAL));
+    }
+    void forLoopExit() {
+        instDecTrees.get(instBlockCounter).addChild(forLoopTree.get(forLoopCounter));
+        forLoopTree.remove(forLoopCounter);
+        forLoopCounter--;
     }
     //direct
     void varInit(GoParser.Instruction_decContext ctx) {
@@ -60,7 +81,7 @@ public class AstCreator {
                 new AstNode(localCtx.VAR_TYPE().getText(), AstNodeType.VAR_TYPE),
                 exprTree),
                 "var_init");
-        instDecTrees.get(recCounter).addChild(varInitTree);
+        instDecTrees.get(instBlockCounter).addChild(varInitTree);
     }
     //direct
     void varAssign(GoParser.Instruction_decContext ctx) {
@@ -68,38 +89,49 @@ public class AstCreator {
         varAssignTree = new AstNode(List.of(new AstNode(localCtx.ID().getText(), AstNodeType.ID),
                 exprTree),
                 "var_assign");
-        instDecTrees.get(recCounter).addChild(varAssignTree);
+        instDecTrees.get(instBlockCounter).addChild(varAssignTree);
     }
     //indirect
     void funcInvoc() {
-        instDecTrees.get(recCounter).addChild(funcInvocTree);
+        instDecTrees.get(instBlockCounter).addChild(funcInvocTree);
     }
     //direct
     void funcReturn() {
         funcReturnTree = new AstNode(List.of(exprTree), "func_return");
-        instDecTrees.get(recCounter).addChild(funcReturnTree);
+        instDecTrees.get(instBlockCounter).addChild(funcReturnTree);
     }
     //direct
     void expr() {
-        instDecTrees.get(recCounter).addChild(exprTree);
+        instDecTrees.get(instBlockCounter).addChild(exprTree);
     }
 
 
     //if_statement
     void ifStatementBlock() {
         if(instructionBlockTree != null) {
-            ifTree.addChild(instructionBlockTree);
+            ifStatementTree.get(ifElseCounter).addChild(instructionBlockTree);
         }
     }
     void ifStatementBExpr() {
-        ifTree = new AstNode(List.of(bexprTree), "if_statement");
+        ifStatementTree.get(ifElseCounter).addChild(new AstNode(List.of(bexprTree), "if_bexpr"));
     }
     //connects to ifStatment
     void elseStatmentBlock() {
         //elseTree = new AstNode(instructionBlockTree.children, "else_statement");
-        elseTree = new AstNode(List.of(instructionBlockTree), "else_statement");
+        //remove null entry and add non-null entry
+        elseStatementTree.remove(ifElseCounter);
+        elseStatementTree.add(new AstNode(List.of(instructionBlockTree), "else_statement"));
     }
 
+    //for_loop
+    void forLoopBlock() {
+        if(instructionBlockTree != null) {
+            forLoopTree.get(forLoopCounter).addChild(instructionBlockTree);
+        }
+    }
+    void forLoopBExpr() {
+        forLoopTree.get(forLoopCounter).addChild(new AstNode(List.of(bexprTree), "for_bexpr"));
+    }
 
     //func_invoc
     void funcInvocExpr(GoParser.Func_invocContext ctx) {
@@ -127,7 +159,7 @@ public class AstCreator {
         exprTree = aexprTree;
     }
 
-    //aexpr
+    //aexpr TODO: operator node to root
     void opAdd() {
         aexprTree = new AstNode(List.of(aexprTree, new AstNode("+", AstNodeType.OP), atermTree), "aexpr");
     }
@@ -255,8 +287,8 @@ public class AstCreator {
     void exprParamID(GoParser.Expr_paramContext ctx) {
         paramTree = new AstNode(ctx.ID().getText(), AstNodeType.ID);
     }
-    void funcInvocExprParam(GoParser.Expr_paramContext ctx) {
-        paramTree = new AstNode(List.of(funcInvocTree), "func_invoc");
+    void funcInvocExprParam() {
+        paramTree = new AstNode(funcInvocTree.children, "func_invoc");
     }
 
 }
