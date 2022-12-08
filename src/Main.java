@@ -16,6 +16,7 @@ public class Main {
 
         GoParser parser = new GoParser( tokens );
         ParseTree tree = parser.program();
+        System.out.println(tree.toStringTree());
 
         GoVisitor visitor = new GoVisitor();
         ParseTreeWalker walker = new ParseTreeWalker();

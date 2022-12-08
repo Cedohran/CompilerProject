@@ -14,7 +14,7 @@ AstCreator creator = new AstCreator();
 
 //TODO: newlines und whitespaces
 //main frame
-program:
+program: //TODO: erste Funktion main? import mehrere?
         pkg impt /*func_main*/ func EOF;
 
 pkg:
@@ -25,6 +25,8 @@ impt:
         | KEY_IMPORT ws LIT_STR nl impt
         | optnl;
 
+
+//instructions
 instruction_block:
         {creator.instructionBlockEnter();} SNTX_BRACE_L nl instruction optnl optws SNTX_BRACE_R {creator.instructionBlockExit();}
         | ;
