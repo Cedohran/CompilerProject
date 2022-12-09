@@ -1,17 +1,19 @@
+import java.util.ArrayList;
 import java.util.List;
 
 public class GoVisitorAstCreator extends GoParserBaseListener{
-    public AstNode ast = new AstNode("program", AstNodeType.NON_TERMINAL);
+    public AstNode ast = new AstNode(new ArrayList<>(), "program", AstNodeType.NON_TERMINAL);
 
     @Override
     public void exitFunc(GoParser.FuncContext ctx) {
         ast.addChild(
                 new AstNode(List.of(
-                        new AstNode(ctx.ID().getText(), AstNodeType.ID),
+                        new AstNode(new ArrayList<>(), ctx.ID().getText(), AstNodeType.ID),
                         funcParam(ctx.func_param()),
                         funcRetType(ctx.func_ret_type()),
-                        instructionBlock(ctx.instruction_block())
-                ), "func")
+                        instructionBlock(ctx.instruction_block())),
+                        "func",
+                        AstNodeType.NON_TERMINAL)
         );
     }
 
@@ -22,19 +24,21 @@ public class GoVisitorAstCreator extends GoParserBaseListener{
     private AstNode funcParam(GoParser.Func_paramContext ctx){
         if(ctx.ID() == null) return AstNode.createNullNode();
         return new AstNode(List.of(
-                new AstNode(ctx.ID().getText(), AstNodeType.ID),
-                new AstNode(ctx.VAR_TYPE().getText(), AstNodeType.VAR_TYPE),
-                funcParam2(ctx.func_param2())
-        ), "func_param");
+                new AstNode(new ArrayList<>(), ctx.ID().getText(), AstNodeType.ID),
+                new AstNode(new ArrayList<>(), ctx.VAR_TYPE().getText(), AstNodeType.VAR_TYPE),
+                funcParam2(ctx.func_param2())),
+                "func_param",
+                AstNodeType.NON_TERMINAL);
     }
     //func_param2 -> nullable
     private AstNode funcParam2(GoParser.Func_param2Context ctx){
         if(ctx.ID() == null) return AstNode.createNullNode();
         return new AstNode(List.of(
-                new AstNode(ctx.ID().getText(), AstNodeType.ID),
-                new AstNode(ctx.VAR_TYPE().getText(), AstNodeType.VAR_TYPE),
-                funcParam2(ctx.func_param2())
-        ), "func_param2");
+                new AstNode(new ArrayList<>(), ctx.ID().getText(), AstNodeType.ID),
+                new AstNode(new ArrayList<>(), ctx.VAR_TYPE().getText(), AstNodeType.VAR_TYPE),
+                funcParam2(ctx.func_param2())),
+                "func_param2",
+                AstNodeType.NON_TERMINAL);
     }
     //func_invoc
     private AstNode funcInvoc(GoParser.Func_invocContext ctx) {
@@ -62,8 +66,9 @@ public class GoVisitorAstCreator extends GoParserBaseListener{
         if(ctx.instruction_dec() == null) return AstNode.createNullNode();
         return new AstNode(List.of(
                 instructionDec(ctx.instruction_dec()),
-                instruction(ctx.instruction())
-        ), "instruction_block");
+                instruction(ctx.instruction())),
+                "instruction_block",
+                AstNodeType.NON_TERMINAL);
     }
     //instruction_dec
     private AstNode instructionDec(GoParser.Instruction_decContext ctx) {
@@ -89,17 +94,19 @@ public class GoVisitorAstCreator extends GoParserBaseListener{
     //var_init
     private AstNode varInit(GoParser.Var_initContext ctx) {
         return new AstNode(List.of(
-                new AstNode(ctx.ID().getText(), AstNodeType.ID),
-                new AstNode(ctx.VAR_TYPE().getText(), AstNodeType.VAR_TYPE),
-                expr(ctx.expr())
-        ), "var_init");
+                new AstNode(new ArrayList<>(), ctx.ID().getText(), AstNodeType.ID),
+                new AstNode(new ArrayList<>(), ctx.VAR_TYPE().getText(), AstNodeType.VAR_TYPE),
+                expr(ctx.expr())),
+                "var_init",
+                AstNodeType.NON_TERMINAL);
     }
     //var_assign
     private AstNode varAssign(GoParser.Var_assignContext ctx) {
         return new AstNode(List.of(
-                new AstNode(ctx.ID().getText(), AstNodeType.ID),
-                expr(ctx.expr())
-        ), "var_init");
+                new AstNode(new ArrayList<>(), ctx.ID().getText(), AstNodeType.ID),
+                expr(ctx.expr())),
+                "var_init",
+                AstNodeType.NON_TERMINAL);
     }
 
     //>>>>>>>>>>if statement
@@ -108,15 +115,17 @@ public class GoVisitorAstCreator extends GoParserBaseListener{
         return new AstNode(List.of(
                 bExpr(ctx.bexpr()),
                 instructionBlock(ctx.instruction_block()),
-                elseStatement(ctx.else_statement())
-        ), "if_statement");
+                elseStatement(ctx.else_statement())),
+                "if_statement",
+                AstNodeType.NON_TERMINAL);
     }
     //else_statement -> nullable
     private AstNode elseStatement(GoParser.Else_statementContext ctx) {
         if(ctx.KEY_ELSE() == null) return AstNode.createNullNode();
         return new AstNode(List.of(
-                instructionBlock(ctx.instruction_block())
-        ), "else_statement");
+                instructionBlock(ctx.instruction_block())),
+                "else_statement",
+                AstNodeType.NON_TERMINAL);
     }
 
 
@@ -125,8 +134,9 @@ public class GoVisitorAstCreator extends GoParserBaseListener{
     private AstNode forLoop(GoParser.For_loopContext ctx) {
         return new AstNode(List.of(
                 bExpr(ctx.bexpr()),
-                instructionBlock(ctx.instruction_block())
-        ), "for_loop");
+                instructionBlock(ctx.instruction_block())),
+                "for_loop",
+                AstNodeType.NON_TERMINAL);
     }
 
 
@@ -148,9 +158,10 @@ public class GoVisitorAstCreator extends GoParserBaseListener{
         if(ctx.bexpr() != null) {
             bExprNode = new AstNode(List.of(
                     bExpr(ctx.bexpr()),
-                    new AstNode(ctx.LGC_OR().getText(), AstNodeType.LGC_SMBL),
-                    bTerm(ctx.bterm())
-            ), "else_statement");
+                    new AstNode(new ArrayList<>(),ctx.LGC_OR().getText(), AstNodeType.LGC_SMBL),
+                    bTerm(ctx.bterm())),
+                    "bexpr",
+                    AstNodeType.NON_TERMINAL);
         } else {
             bExprNode = bTerm(ctx.bterm());
         }

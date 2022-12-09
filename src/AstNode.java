@@ -11,25 +11,9 @@ public class AstNode {
         children = new ArrayList<>();
     }
 
-    //terminal constructor
-    public AstNode(String value, AstNodeType type) {
-        this.value = value;
-        children = new ArrayList<>();
-        this.type = type;
-    }
-
-    //non-terminal constructor
-    public AstNode(List<AstNode> children, String value) {
-        this.value = value;
-        this.children = new ArrayList<>();
-        this.children.addAll(children);
-        this.type = AstNodeType.NON_TERMINAL;
-    }
-
     public AstNode(List<AstNode> children, String value, AstNodeType type) {
         this.value = value;
-        this.children = new ArrayList<>();
-        this.children.addAll(children);
+        this.children = children;
         this.type = type;
     }
 
@@ -45,10 +29,8 @@ public class AstNode {
         return null;
     }
 
-    public String toString() {
-        StringBuilder buffer = new StringBuilder(500000);
-        print(buffer, "", "");
-        return buffer.toString();
+    public boolean hasChild(){
+        return !children.isEmpty();
     }
 
     public AstNode addChild(AstNode child) {
@@ -58,6 +40,12 @@ public class AstNode {
 
     public void addChildren(List<AstNode> children) {
         this.children.addAll(children);
+    }
+
+    public String toString() {
+        StringBuilder buffer = new StringBuilder(500000);
+        print(buffer, "", "");
+        return buffer.toString();
     }
 
     private void print(StringBuilder buffer, String prefix, String childrenPrefix) {
