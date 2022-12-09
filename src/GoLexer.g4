@@ -1,7 +1,8 @@
 lexer grammar GoLexer;
 
-//comments
-COMMENT   : '/''/'(.)* ;
+//ignore comments and whitespaces
+COMMENT   : ('/''/'(.)*) -> skip ;
+SNTX_WHITE_SPC   : (' ' | '\t') -> skip;
 
 //literals
 LIT_INT     : [0-9]+ ;
@@ -34,7 +35,6 @@ SNTX_BRACE_L     : '{' ;
 SNTX_BRACE_R     : '}' ;
 SNTX_DOT         : '.' ;
 SNTX_COMMA       : ',' ;
-SNTX_WHITE_SPC   : ' ' | '\t' ;
 
 //typing
 VAR_TYPE  :  'int' | 'float64' | 'bool' | 'string' ;

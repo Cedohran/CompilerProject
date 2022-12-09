@@ -13,7 +13,8 @@ AstCreator creator = new AstCreator();
 //TODO: newlines und whitespaces
 
 //>>>>>>>>>>main frame
-program: //TODO: erste Funktion main? import mehrere?
+//main funktion zu erst! import und package static!
+program:
         pkg impt /*func_main*/ func EOF;
 
 pkg:
