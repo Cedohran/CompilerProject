@@ -4,7 +4,6 @@ import java.util.List;
 
 public class AstNode {
     String value = "?";
-    AstNode parent = null;
     List<AstNode> children;
     AstNodeType type;
 
@@ -32,6 +31,14 @@ public class AstNode {
         this.children = new ArrayList<>();
         this.children.addAll(children);
         this.type = type;
+    }
+
+    public static AstNode createNullNode() {
+        AstNode nullNode = new AstNode();
+        nullNode.type = AstNodeType.NULL_NODE;
+        nullNode.children = new ArrayList<>();
+        nullNode.value = "";
+        return nullNode;
     }
 
     public DataType getDataType() {

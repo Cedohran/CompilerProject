@@ -3,17 +3,16 @@ parser grammar GoParser;
 options {
     tokenVocab=GoLexer;
 }
-
 @header {
 
 }
-
 @members {
 AstCreator creator = new AstCreator();
 }
 
 //TODO: newlines und whitespaces
-//main frame
+
+//>>>>>>>>>>main frame
 program: //TODO: erste Funktion main? import mehrere?
         pkg impt /*func_main*/ func EOF;
 
@@ -26,38 +25,16 @@ impt:
         | optnl;
 
 
-//instructions
-instruction_block:
-        {creator.instructionBlockEnter();} SNTX_BRACE_L nl instruction optnl optws SNTX_BRACE_R {creator.instructionBlockExit();}
-        | ;
-
-instruction: //TODO: Frage zu newlines
-        optnl optws instruction_dec optws optnl instruction
-        | nl optws
-        | ;
-
-instruction_dec:
-        {creator.ifStatementEnter();} if_statement {creator.ifStatementExit();}
-        | {creator.forLoopEnter();} for_loop {creator.forLoopExit();}
-        | var_init {creator.varInit(_localctx);}
-        | var_assign {creator.varAssign(_localctx);}
-        | func_invoc {creator.funcInvoc();}
-        | func_return {creator.funcReturn();} ;
-        //| expr {creator.expr();} ;
-
-
-//functions
+//>>>>>>>>>>functions
 /*func_main:
         KEY_FUNC ws KEY_MAIN SNTX_PARANT_L SNTX_PARANT_R ws SNTX_BRACE_L instruction SNTX_BRACE_R nl;
 */
 func:   // func name(param0 type0, param1 type1, ...) returntype {...}
-        KEY_FUNC ws ID SNTX_PARANT_L func_param SNTX_PARANT_R optws func_ret_type optws instruction_block {creator.func(_localctx);} nl func
-        | KEY_FUNC ws ID SNTX_PARANT_L func_param SNTX_PARANT_R optws func_ret_type optws instruction_block {creator.func(_localctx);}
+        KEY_FUNC ws ID SNTX_PARANT_L func_param SNTX_PARANT_R optws func_ret_type optws instruction_block {creator.func(_localctx);} optnl func
         | ;
 
 func_param:
         ID ws VAR_TYPE func_param2
-        | ID ws VAR_TYPE
         | ;
 
 func_param2:
@@ -77,7 +54,27 @@ func_ret_type:
         | ;
 
 
-//variables
+//>>>>>>>>>>instructions
+instruction_block:
+        {creator.instructionBlockEnter();} SNTX_BRACE_L nl instruction optnl optws SNTX_BRACE_R {creator.instructionBlockExit();}
+        | ;
+
+instruction: //TODO: Frage zu newlines
+        optnl optws instruction_dec optws optnl instruction
+        | nl optws
+        | ;
+
+instruction_dec:
+        {creator.ifStatementEnter();} if_statement {creator.ifStatementExit();}
+        | {creator.forLoopEnter();} for_loop {creator.forLoopExit();}
+        | var_init {creator.varInit(_localctx);}
+        | var_assign {creator.varAssign(_localctx);}
+        | func_invoc {creator.funcInvoc();}
+        | func_return {creator.funcReturn();} ;
+        //| expr {creator.expr();} ;
+
+
+//>>>>>>>>>>variables
 var_init:
         KEY_VAR ws ID ws VAR_TYPE optws KEY_VAR_ASSGN expr ;
 
@@ -85,7 +82,7 @@ var_assign:
         ID optws KEY_VAR_ASSGN expr ;
 
 
-//if statement
+//>>>>>>>>>>if statement
 if_statement:
         KEY_IF bexpr {creator.ifStatementBExpr();} instruction_block {creator.ifStatementBlock();} optws else_statement ;
 
@@ -94,12 +91,12 @@ else_statement:
         | ;
 
 
-//for loop
+//>>>>>>>>>>for loop
 for_loop:
         KEY_FOR bexpr {creator.forLoopBExpr();} instruction_block {creator.forLoopBlock();} ;
 
 
-//expressions
+//>>>>>>>>>>expressions
 expr:
         bexpr {creator.bExpr();}
         | aexpr {creator.aExpr();};
@@ -146,7 +143,8 @@ expr_param:
         | ID {creator.exprParamID(_localctx);}
         | func_invoc {creator.funcInvocExprParam();} ;
 
-//whitespaces / newlines
+
+//>>>>>>>>>>whitespaces / newlines
 ws:
         SNTX_WHITE_SPC
         | SNTX_WHITE_SPC ws ;
@@ -159,27 +157,3 @@ nl:
 optnl:
         nl
         | ;
-
-
-
-
-
-//old expression
-/*
-expr:
-        expr LGC_OR term
-        | expr CMP_SMBL term
-        | expr OP_MULT term
-        | expr OP_DIV term
-        | expr OP_MOD term
-        | term ;
-term:
-        term LGC_AND factor
-        | term OP_ADD factor
-        | term OP_SUB factor
-        | factor ;
-factor:
-        LGC_NOT factor
-        | optws SNTX_PARANT_L expr SNTX_PARANT_R optws
-        | optws expr_param optws ;
-*/

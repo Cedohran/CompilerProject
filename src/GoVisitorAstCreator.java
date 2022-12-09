@@ -15,42 +15,176 @@ public class GoVisitorAstCreator extends GoParserBaseListener{
         );
     }
 
+
+    //>>>>>>>>>>functions
+
     //func_param -> nullable
     private AstNode funcParam(GoParser.Func_paramContext ctx){
-        if(ctx.ID() == null) return new AstNode();
-        AstNode funcParamNode = new AstNode("func_param", AstNodeType.NON_TERMINAL);
-
-        funcParamNode.addChild(new AstNode(ctx.ID().getText(), AstNodeType.ID));
-        funcParamNode.addChild(new AstNode(ctx.VAR_TYPE().getText(), AstNodeType.VAR_TYPE));
-
-        if(ctx.func_param2().ID() != null) {
-            funcParamNode.addChild(funcParam2(ctx.func_param2()));
-        }
-
-        return funcParamNode;
+        if(ctx.ID() == null) return AstNode.createNullNode();
+        return new AstNode(List.of(
+                new AstNode(ctx.ID().getText(), AstNodeType.ID),
+                new AstNode(ctx.VAR_TYPE().getText(), AstNodeType.VAR_TYPE),
+                funcParam2(ctx.func_param2())
+        ), "func_param");
     }
     //func_param2 -> nullable
     private AstNode funcParam2(GoParser.Func_param2Context ctx){
-        AstNode funcParam2Node = new AstNode(List.of(
+        if(ctx.ID() == null) return AstNode.createNullNode();
+        return new AstNode(List.of(
                 new AstNode(ctx.ID().getText(), AstNodeType.ID),
-                new AstNode(ctx.VAR_TYPE().getText(), AstNodeType.VAR_TYPE)
+                new AstNode(ctx.VAR_TYPE().getText(), AstNodeType.VAR_TYPE),
+                funcParam2(ctx.func_param2())
         ), "func_param2");
-
-        if(ctx.func_param2().ID() != null) {
-            funcParam2Node.addChild(funcParam2(ctx.func_param2()));
-        }
-
-        return funcParam2Node;
+    }
+    //func_invoc
+    private AstNode funcInvoc(GoParser.Func_invocContext ctx) {
+        return AstNode.createNullNode();
+    }
+    //func_return
+    private AstNode funcReturn(GoParser.Func_returnContext ctx) {
+        return AstNode.createNullNode();
     }
     //func_ret_type
     private AstNode funcRetType(GoParser.Func_ret_typeContext ctx){
-        return new AstNode();
+        return AstNode.createNullNode();
     }
 
-    //instruction
 
-    //instruction_block
+    //>>>>>>>>>>instructions
+
+    //instruction_block -> nullable
     private AstNode instructionBlock(GoParser.Instruction_blockContext ctx) {
-        return new AstNode();
+        if(ctx.instruction() == null) return AstNode.createNullNode();
+        return instruction(ctx.instruction());
     }
+    //instruction -> nullable
+    private AstNode instruction(GoParser.InstructionContext ctx) {
+        if(ctx.instruction_dec() == null) return AstNode.createNullNode();
+        return new AstNode(List.of(
+                instructionDec(ctx.instruction_dec()),
+                instruction(ctx.instruction())
+        ), "instruction_block");
+    }
+    //instruction_dec
+    private AstNode instructionDec(GoParser.Instruction_decContext ctx) {
+        AstNode instDecNode = null;
+        if(ctx.if_statement() != null) {
+            instDecNode = ifStatement(ctx.if_statement());
+        } else if(ctx.for_loop() != null) {
+            instDecNode = forLoop(ctx.for_loop());
+        } else if(ctx.var_init() != null) {
+            instDecNode = varInit(ctx.var_init());
+        } else if(ctx.var_assign() != null) {
+            instDecNode = varAssign(ctx.var_assign());
+        } else if(ctx.func_invoc() != null) {
+            instDecNode = funcInvoc(ctx.func_invoc());
+        } else if(ctx.func_return() != null) {
+            instDecNode = funcReturn(ctx.func_return());
+        }
+        return instDecNode;
+    }
+
+
+    //>>>>>>>>>>variables
+    //var_init
+    private AstNode varInit(GoParser.Var_initContext ctx) {
+        return new AstNode(List.of(
+                new AstNode(ctx.ID().getText(), AstNodeType.ID),
+                new AstNode(ctx.VAR_TYPE().getText(), AstNodeType.VAR_TYPE),
+                expr(ctx.expr())
+        ), "var_init");
+    }
+    //var_assign
+    private AstNode varAssign(GoParser.Var_assignContext ctx) {
+        return new AstNode(List.of(
+                new AstNode(ctx.ID().getText(), AstNodeType.ID),
+                expr(ctx.expr())
+        ), "var_init");
+    }
+
+    //>>>>>>>>>>if statement
+    //if_statement
+    private AstNode ifStatement(GoParser.If_statementContext ctx) {
+        return new AstNode(List.of(
+                bExpr(ctx.bexpr()),
+                instructionBlock(ctx.instruction_block()),
+                elseStatement(ctx.else_statement())
+        ), "if_statement");
+    }
+    //else_statement -> nullable
+    private AstNode elseStatement(GoParser.Else_statementContext ctx) {
+        if(ctx.KEY_ELSE() == null) return AstNode.createNullNode();
+        return new AstNode(List.of(
+                instructionBlock(ctx.instruction_block())
+        ), "else_statement");
+    }
+
+
+    //>>>>>>>>>>for loop
+    //for_loop
+    private AstNode forLoop(GoParser.For_loopContext ctx) {
+        return new AstNode(List.of(
+                bExpr(ctx.bexpr()),
+                instructionBlock(ctx.instruction_block())
+        ), "for_loop");
+    }
+
+
+    //>>>>>>>>>>expressions
+    //expr
+    private AstNode expr(GoParser.ExprContext ctx) {
+        AstNode exprNode = null;
+        if(ctx.bexpr() != null) {
+            exprNode = bExpr(ctx.bexpr());
+        } else if(ctx.aexpr() != null) {
+            exprNode = aExpr(ctx.aexpr());
+        }
+        return exprNode;
+    }
+    //boolean expression
+    //bexpr
+    private AstNode bExpr(GoParser.BexprContext ctx) {
+        AstNode bExprNode;
+        if(ctx.bexpr() != null) {
+            bExprNode = new AstNode(List.of(
+                    bExpr(ctx.bexpr()),
+                    new AstNode(ctx.LGC_OR().getText(), AstNodeType.LGC_SMBL),
+                    bTerm(ctx.bterm())
+            ), "else_statement");
+        } else {
+            bExprNode = bTerm(ctx.bterm());
+        }
+        return bExprNode;
+    }
+    //bterm
+    private AstNode bTerm(GoParser.BtermContext ctx) {
+        return AstNode.createNullNode();
+    }
+    //bcomp
+    private AstNode bComp(GoParser.BcompContext ctx) {
+        return AstNode.createNullNode();
+    }
+    //bfactor
+    private AstNode bFactor(GoParser.BfactorContext ctx) {
+        return AstNode.createNullNode();
+    }
+    //arithmetic expression
+    //aexpr
+    private AstNode aExpr(GoParser.AexprContext ctx) {
+        return AstNode.createNullNode();
+    }
+    //aterm
+    private AstNode aTerm(GoParser.AtermContext ctx) {
+        return AstNode.createNullNode();
+    }
+    //afactor
+    private AstNode aFactor(GoParser.AfactorContext ctx) {
+        return AstNode.createNullNode();
+    }
+    //expr_param
+    private AstNode exprParam(GoParser.Expr_paramContext ctx) {
+        return AstNode.createNullNode();
+    }
+
+
 }
