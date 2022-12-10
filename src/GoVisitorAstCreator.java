@@ -141,7 +141,7 @@ public class GoVisitorAstCreator extends GoParserBaseListener{
     //if_statement
     private AstNode ifStatement(GoParser.If_statementContext ctx) {
         return new AstNode(List.of(
-                bExpr(ctx.bexpr()),
+                expr(ctx.expr()),
                 instructionBlock(ctx.instruction_block()),
                 elseStatement(ctx.else_statement())),
                 "if_statement",
@@ -161,7 +161,7 @@ public class GoVisitorAstCreator extends GoParserBaseListener{
     //for_loop
     private AstNode forLoop(GoParser.For_loopContext ctx) {
         return new AstNode(List.of(
-                bExpr(ctx.bexpr()),
+                expr(ctx.expr()),
                 instructionBlock(ctx.instruction_block())),
                 "for_loop",
                 AstNodeType.NON_TERMINAL);
@@ -171,11 +171,15 @@ public class GoVisitorAstCreator extends GoParserBaseListener{
     //>>>>>>>>>>expressions
     //expr
     private AstNode expr(GoParser.ExprContext ctx) {
-        AstNode exprNode = null;
+        AstNode exprNode;
         if(ctx.bexpr() != null) {
             exprNode = bExpr(ctx.bexpr());
-        } else if(ctx.aexpr() != null) {
+        } else {
             exprNode = aExpr(ctx.aexpr());
+        }
+        //unabstract the abstraction (one layer down)
+        if(exprNode.children().isEmpty()) {
+            exprNode = new AstNode(List.of(exprNode), "expr", AstNodeType.NON_TERMINAL);
         }
         return exprNode;
     }
@@ -237,22 +241,22 @@ public class GoVisitorAstCreator extends GoParserBaseListener{
         } else if(ctx.SNTX_PARANT_L() != null) {
             bFactorNode = bExpr(ctx.bexpr());
         } else if(ctx.LIT_BOOL() != null) {
-            bFactorNode = new AstNode(List.of(
-                    new AstNode(new ArrayList<>(),ctx.LIT_BOOL().getText(), AstNodeType.LIT)),
-                    "bfactor",
-                    AstNodeType.NON_TERMINAL);
+            bFactorNode = new AstNode(new ArrayList<>(),ctx.LIT_BOOL().getText(), AstNodeType.LIT);
+            bFactorNode.setDataType(DataType.BOOL);
         } else if(ctx.ID() != null) {
             bFactorNode = new AstNode(List.of(
                     new AstNode(new ArrayList<>(),ctx.ID().getText(), AstNodeType.ID)),
                     "bfactor",
                     AstNodeType.NON_TERMINAL);
-        } else {
+        } /*else if(ctx.CMP_SMBL() != null) {
             bFactorNode = new AstNode(List.of(
                     aExpr(ctx.aexpr(0)),
                     new AstNode(new ArrayList<>(), ctx.CMP_SMBL().getText(), AstNodeType.CMP_SMBL),
                     aExpr(ctx.aexpr(1))),
                     "bfactor",
                     AstNodeType.NON_TERMINAL);
+        }*/ else {
+            bFactorNode = aExpr(ctx.aexpr());
         }
         return bFactorNode;
     }
@@ -334,10 +338,23 @@ public class GoVisitorAstCreator extends GoParserBaseListener{
     private AstNode exprParam(GoParser.Expr_paramContext ctx) {
         AstNode exprParamNode;
         String litValue = "";
-        if(ctx.LIT_INT() != null) litValue = ctx.LIT_INT().getText();
-        if(ctx.LIT_FLOAT() != null) litValue = ctx.LIT_FLOAT().getText();
-        if(ctx.LIT_STR() != null) litValue = ctx.LIT_STR().getText();
-        if(ctx.LIT_BOOL() != null) litValue = ctx.LIT_BOOL().getText();
+        DataType dataType = DataType.UNDEF;
+        if(ctx.LIT_INT() != null) {
+            litValue = ctx.LIT_INT().getText();
+            dataType = DataType.INT;
+        }
+        if(ctx.LIT_FLOAT() != null) {
+            litValue = ctx.LIT_FLOAT().getText();
+            dataType = DataType.FLOAT;
+        }
+        if(ctx.LIT_STR() != null) {
+            litValue = ctx.LIT_STR().getText();
+            dataType = DataType.STR;
+        }
+        if(ctx.LIT_BOOL() != null) {
+            litValue = ctx.LIT_BOOL().getText();
+            dataType = DataType.BOOL;
+        }
 
         if(ctx.ID() != null) {
             exprParamNode = new AstNode(new ArrayList<>(), ctx.ID().getText(), AstNodeType.ID);
@@ -345,6 +362,7 @@ public class GoVisitorAstCreator extends GoParserBaseListener{
             exprParamNode = funcInvoc(ctx.func_invoc());
         } else {
             exprParamNode = new AstNode(new ArrayList<>(), litValue, AstNodeType.LIT);
+            exprParamNode.setDataType(dataType);
         }
         return exprParamNode;
     }

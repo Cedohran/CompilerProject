@@ -95,7 +95,7 @@ for_loop:
 expr:
         bexpr
         | aexpr ;
-
+//TODO: make (2+2) + (true||false) possible (?)
 //boolean expression
 bexpr:
         bexpr LGC_OR bterm
@@ -111,7 +111,7 @@ bfactor:
         | SNTX_PARANT_L bexpr SNTX_PARANT_R
         | LIT_BOOL
         | ID
-        | aexpr CMP_SMBL aexpr
+        //| aexpr CMP_SMBL aexpr
         | aexpr ;
 
 //arithmetic expression
@@ -128,6 +128,7 @@ afactor:
         OP_ADD afactor
         | OP_SUB afactor
         | SNTX_PARANT_L aexpr SNTX_PARANT_R
+        //TODO: | SNTX_PARANT_L bexpr SNTX_PARANT_R
         | expr_param ;
 
 //indirect terminal rules
