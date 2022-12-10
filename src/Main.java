@@ -9,7 +9,7 @@ import java.io.InputStream;
 
 public class Main {
     public static void main(String[] args) throws IOException {
-        InputStream input = new FileInputStream("visit.txt");
+        InputStream input = new FileInputStream("input.txt");
 
         GoLexer lexer = new GoLexer(CharStreams.fromStream(input));
         CommonTokenStream tokens = new CommonTokenStream( lexer );
@@ -17,15 +17,14 @@ public class Main {
         GoParser parser = new GoParser( tokens );
         ParseTree tree = parser.program();
         ParseTreeWalker walker = new ParseTreeWalker();
-        //System.out.println(tree.toStringTree());
 
-        GoVisitor visitor = new GoVisitor();
-        walker.walk(visitor, tree);
 
-        GoVisitorAstCreator creator =  new GoVisitorAstCreator();
-        walker.walk(creator, tree);
-        System.out.println(creator.ast.toString());
+        GoVisitorAstCreator astCreator =  new GoVisitorAstCreator();
+        walker.walk(astCreator, tree);
+        System.out.println(astCreator.AST.toString());
 
+        SymbolTableCreator symbolTableCreator = new SymbolTableCreator();
+        walker.walk(symbolTableCreator, tree);
 
         //System.out.println(parser.creator.programTree.toString());
 

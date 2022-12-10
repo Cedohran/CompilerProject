@@ -1,7 +1,7 @@
 import java.util.*;
 
-public class GoVisitor extends GoParserBaseListener {
-    Map<String, DataType> varMap = new HashMap<>();
+public class SymbolTableCreator extends GoParserBaseListener {
+    Map<String, DataType> symbolTable = new HashMap<>();
 
     //variable and parameter name+type
     @Override
@@ -13,7 +13,7 @@ public class GoVisitor extends GoParserBaseListener {
             case "float64" -> type = DataType.FLOAT;
             case "string" -> type = DataType.STR;
         }
-        varMap.put(ctx.ID().getText(), type);
+        symbolTable.put(ctx.ID().getText(), type);
     }
 
     @Override
@@ -27,7 +27,7 @@ public class GoVisitor extends GoParserBaseListener {
             case "float64" -> type = DataType.FLOAT;
             case "string" -> type = DataType.STR;
         }
-        varMap.put(ctx.ID().getText(), type);
+        symbolTable.put(ctx.ID().getText(), type);
     }
 
     @Override
@@ -41,6 +41,6 @@ public class GoVisitor extends GoParserBaseListener {
             case "float64" -> type = DataType.FLOAT;
             case "string" -> type = DataType.STR;
         }
-        varMap.put(ctx.ID().getText(), type);
+        symbolTable.put(ctx.ID().getText(), type);
     }
 }

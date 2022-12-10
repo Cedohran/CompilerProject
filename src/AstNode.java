@@ -4,22 +4,20 @@ import java.util.List;
 
 public class AstNode {
     String value = "?";
-    List<AstNode> children;
-    AstNodeType type;
+    List<AstNode> children = new ArrayList<>();
+    AstNodeType nodeType;
 
-    public AstNode() {
-        children = new ArrayList<>();
-    }
+    public AstNode() {}
 
-    public AstNode(List<AstNode> children, String value, AstNodeType type) {
+    public AstNode(List<AstNode> children, String value, AstNodeType nodeType) {
+        addChildren(children);
         this.value = value;
-        this.children = children;
-        this.type = type;
+        this.nodeType = nodeType;
     }
 
     public static AstNode createNullNode() {
         AstNode nullNode = new AstNode();
-        nullNode.type = AstNodeType.NULL_NODE;
+        nullNode.nodeType = AstNodeType.NULL_NODE;
         nullNode.children = new ArrayList<>();
         nullNode.value = "";
         return nullNode;
@@ -34,12 +32,17 @@ public class AstNode {
     }
 
     public AstNode addChild(AstNode child) {
+        if(child.nodeType == AstNodeType.NULL_NODE) return child;
         this.children.add(child);
         return child;
     }
 
     public void addChildren(List<AstNode> children) {
-        this.children.addAll(children);
+        for(AstNode child : children) {
+            if(child.nodeType != AstNodeType.NULL_NODE) {
+                this.children.add(child);
+            }
+        }
     }
 
     public String toString() {

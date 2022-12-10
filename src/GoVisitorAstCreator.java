@@ -2,11 +2,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class GoVisitorAstCreator extends GoParserBaseListener{
-    public AstNode ast = new AstNode(new ArrayList<>(), "program", AstNodeType.NON_TERMINAL);
+    public AstNode AST = new AstNode(new ArrayList<>(), "program", AstNodeType.NON_TERMINAL);
 
     @Override
-    public void exitFunc(GoParser.FuncContext ctx) {
-        ast.addChild(
+    public void enterFunc(GoParser.FuncContext ctx) {
+        if(ctx.ID() == null) return;
+        AST.addChild(
                 new AstNode(List.of(
                         new AstNode(new ArrayList<>(), ctx.ID().getText(), AstNodeType.ID),
                         funcParam(ctx.func_param()),
@@ -16,7 +17,6 @@ public class GoVisitorAstCreator extends GoParserBaseListener{
                         AstNodeType.NON_TERMINAL)
         );
     }
-
 
     //>>>>>>>>>>functions
 
@@ -42,15 +42,42 @@ public class GoVisitorAstCreator extends GoParserBaseListener{
     }
     //func_invoc
     private AstNode funcInvoc(GoParser.Func_invocContext ctx) {
-        return AstNode.createNullNode();
+        AstNode funcInvocNode;
+        if(ctx.expr() != null) {
+            funcInvocNode = new AstNode(List.of(
+                    new AstNode(new ArrayList<>(),ctx.ID().getText(), AstNodeType.ID),
+                    expr(ctx.expr())),
+                    "func_invoc",
+                    AstNodeType.NON_TERMINAL);
+        } else if(ctx.var_assign() != null) {
+            funcInvocNode = new AstNode(List.of(
+                    new AstNode(new ArrayList<>(),ctx.ID().getText(), AstNodeType.ID),
+                    varAssign(ctx.var_assign())),
+                    "func_invoc",
+                    AstNodeType.NON_TERMINAL);
+        } else {
+            funcInvocNode = new AstNode(List.of(
+                    new AstNode(new ArrayList<>(),ctx.ID().getText(), AstNodeType.ID),
+                    funcInvoc(ctx.func_invoc())),
+                    "func_invoc_dot",
+                    AstNodeType.NON_TERMINAL);
+        }
+        return funcInvocNode;
     }
     //func_return
     private AstNode funcReturn(GoParser.Func_returnContext ctx) {
-        return AstNode.createNullNode();
+        return new AstNode(List.of(
+                expr(ctx.expr())),
+                "func_return",
+                AstNodeType.NON_TERMINAL);
     }
-    //func_ret_type
+    //func_ret_type -> nullable
     private AstNode funcRetType(GoParser.Func_ret_typeContext ctx){
-        return AstNode.createNullNode();
+        if(ctx.VAR_TYPE() == null) return AstNode.createNullNode();
+        return new AstNode(List.of(
+                new AstNode(new ArrayList<>(), ctx.VAR_TYPE().getText(), AstNodeType.VAR_TYPE)),
+                "func_ret_type",
+                AstNodeType.NON_TERMINAL);
     }
 
 
@@ -59,16 +86,17 @@ public class GoVisitorAstCreator extends GoParserBaseListener{
     //instruction_block -> nullable
     private AstNode instructionBlock(GoParser.Instruction_blockContext ctx) {
         if(ctx.instruction() == null) return AstNode.createNullNode();
-        return instruction(ctx.instruction());
+        AstNode instructionBlockNode = new AstNode(new ArrayList<>(), "instruction_block", AstNodeType.NON_TERMINAL);
+        instructionBlockNode.addChildren(instruction(ctx.instruction()));
+        return instructionBlockNode;
     }
     //instruction -> nullable
-    private AstNode instruction(GoParser.InstructionContext ctx) {
-        if(ctx.instruction_dec() == null) return AstNode.createNullNode();
-        return new AstNode(List.of(
-                instructionDec(ctx.instruction_dec()),
-                instruction(ctx.instruction())),
-                "instruction_block",
-                AstNodeType.NON_TERMINAL);
+    private List<AstNode> instruction(GoParser.InstructionContext ctx) {
+        if(ctx.instruction_dec() == null) return List.of(AstNode.createNullNode());
+        List<AstNode> instructionNode = new ArrayList<>();
+        instructionNode.add(instructionDec(ctx.instruction_dec()));
+        instructionNode.addAll(instruction(ctx.instruction()));
+        return instructionNode;
     }
     //instruction_dec
     private AstNode instructionDec(GoParser.Instruction_decContext ctx) {
@@ -169,32 +197,156 @@ public class GoVisitorAstCreator extends GoParserBaseListener{
     }
     //bterm
     private AstNode bTerm(GoParser.BtermContext ctx) {
-        return AstNode.createNullNode();
+        AstNode bTermNode;
+        if(ctx.bterm() != null) {
+            bTermNode = new AstNode(List.of(
+                    bTerm(ctx.bterm()),
+                    new AstNode(new ArrayList<>(),ctx.LGC_AND().getText(), AstNodeType.LGC_SMBL),
+                    bComp(ctx.bcomp())),
+                    "bterm",
+                    AstNodeType.NON_TERMINAL);
+        } else {
+            bTermNode = bComp(ctx.bcomp());
+        }
+        return bTermNode;
     }
     //bcomp
     private AstNode bComp(GoParser.BcompContext ctx) {
-        return AstNode.createNullNode();
+        AstNode bCompNode;
+        if(ctx.bcomp() != null) {
+            bCompNode = new AstNode(List.of(
+                    bComp(ctx.bcomp()),
+                    new AstNode(new ArrayList<>(),ctx.CMP_SMBL().getText(), AstNodeType.CMP_SMBL),
+                    bFactor(ctx.bfactor())),
+                    "bcomp",
+                    AstNodeType.NON_TERMINAL);
+        } else {
+            bCompNode = bFactor(ctx.bfactor());
+        }
+        return bCompNode;
     }
     //bfactor
     private AstNode bFactor(GoParser.BfactorContext ctx) {
-        return AstNode.createNullNode();
+        AstNode bFactorNode;
+        if(ctx.LGC_NOT() != null) {
+            bFactorNode = new AstNode(List.of(
+                    new AstNode(new ArrayList<>(),ctx.LGC_NOT().getText(), AstNodeType.LGC_SMBL),
+                    bFactor(ctx.bfactor())),
+                    "bfactor",
+                    AstNodeType.NON_TERMINAL);
+        } else if(ctx.SNTX_PARANT_L() != null) {
+            bFactorNode = bExpr(ctx.bexpr());
+        } else if(ctx.LIT_BOOL() != null) {
+            bFactorNode = new AstNode(List.of(
+                    new AstNode(new ArrayList<>(),ctx.LIT_BOOL().getText(), AstNodeType.LIT)),
+                    "bfactor",
+                    AstNodeType.NON_TERMINAL);
+        } else if(ctx.ID() != null) {
+            bFactorNode = new AstNode(List.of(
+                    new AstNode(new ArrayList<>(),ctx.ID().getText(), AstNodeType.ID)),
+                    "bfactor",
+                    AstNodeType.NON_TERMINAL);
+        } else {
+            bFactorNode = new AstNode(List.of(
+                    aExpr(ctx.aexpr(0)),
+                    new AstNode(new ArrayList<>(), ctx.CMP_SMBL().getText(), AstNodeType.CMP_SMBL),
+                    aExpr(ctx.aexpr(1))),
+                    "bfactor",
+                    AstNodeType.NON_TERMINAL);
+        }
+        return bFactorNode;
     }
     //arithmetic expression
     //aexpr
     private AstNode aExpr(GoParser.AexprContext ctx) {
-        return AstNode.createNullNode();
+        AstNode aExprNode;
+        if(ctx.OP_ADD() != null) {
+            aExprNode = new AstNode(List.of(
+                    aExpr(ctx.aexpr()),
+                    new AstNode(new ArrayList<>(),ctx.OP_ADD().getText(), AstNodeType.OP),
+                    aTerm(ctx.aterm())),
+                    "aexpr",
+                    AstNodeType.NON_TERMINAL);
+        } else if(ctx.OP_SUB() != null) {
+            aExprNode = new AstNode(List.of(
+                    aExpr(ctx.aexpr()),
+                    new AstNode(new ArrayList<>(),ctx.OP_SUB().getText(), AstNodeType.OP),
+                    aTerm(ctx.aterm())),
+                    "aexpr",
+                    AstNodeType.NON_TERMINAL);
+        } else {
+            aExprNode = aTerm(ctx.aterm());
+        }
+        return aExprNode;
     }
     //aterm
     private AstNode aTerm(GoParser.AtermContext ctx) {
-        return AstNode.createNullNode();
+        AstNode aTermNode;
+        if(ctx.OP_MULT() != null) {
+            aTermNode = new AstNode(List.of(
+                    aTerm(ctx.aterm()),
+                    new AstNode(new ArrayList<>(),ctx.OP_MULT().getText(), AstNodeType.OP),
+                    aFactor(ctx.afactor())),
+                    "aterm",
+                    AstNodeType.NON_TERMINAL);
+        } else if(ctx.OP_DIV() != null) {
+            aTermNode = new AstNode(List.of(
+                    aTerm(ctx.aterm()),
+                    new AstNode(new ArrayList<>(),ctx.OP_DIV().getText(), AstNodeType.OP),
+                    aFactor(ctx.afactor())),
+                    "aterm",
+                    AstNodeType.NON_TERMINAL);
+        } else if(ctx.OP_MOD() != null) {
+            aTermNode = new AstNode(List.of(
+                    aTerm(ctx.aterm()),
+                    new AstNode(new ArrayList<>(),ctx.OP_MOD().getText(), AstNodeType.OP),
+                    aFactor(ctx.afactor())),
+                    "aterm",
+                    AstNodeType.NON_TERMINAL);
+        } else {
+            aTermNode = aFactor(ctx.afactor());
+        }
+        return aTermNode;
     }
     //afactor
     private AstNode aFactor(GoParser.AfactorContext ctx) {
-        return AstNode.createNullNode();
+        AstNode aFactorNode;
+        if(ctx.OP_ADD() != null) {
+            aFactorNode = new AstNode(List.of(
+                    new AstNode(new ArrayList<>(),ctx.OP_ADD().getText(), AstNodeType.OP),
+                    aFactor(ctx.afactor())),
+                    "afactor",
+                    AstNodeType.NON_TERMINAL);
+        } else if(ctx.OP_SUB() != null) {
+            aFactorNode = new AstNode(List.of(
+                    new AstNode(new ArrayList<>(),ctx.OP_SUB().getText(), AstNodeType.OP),
+                    aFactor(ctx.afactor())),
+                    "afactor",
+                    AstNodeType.NON_TERMINAL);
+        } else if(ctx.SNTX_PARANT_L() != null) {
+            aFactorNode = aExpr(ctx.aexpr());
+        } else {
+            aFactorNode = exprParam(ctx.expr_param());
+        }
+        return aFactorNode;
     }
     //expr_param
     private AstNode exprParam(GoParser.Expr_paramContext ctx) {
-        return AstNode.createNullNode();
+        AstNode exprParamNode;
+        String litValue = "";
+        if(ctx.LIT_INT() != null) litValue = ctx.LIT_INT().getText();
+        if(ctx.LIT_FLOAT() != null) litValue = ctx.LIT_FLOAT().getText();
+        if(ctx.LIT_STR() != null) litValue = ctx.LIT_STR().getText();
+        if(ctx.LIT_BOOL() != null) litValue = ctx.LIT_BOOL().getText();
+
+        if(ctx.ID() != null) {
+            exprParamNode = new AstNode(new ArrayList<>(), ctx.ID().getText(), AstNodeType.ID);
+        } else if(ctx.func_invoc() != null) {
+            exprParamNode = funcInvoc(ctx.func_invoc());
+        } else {
+            exprParamNode = new AstNode(new ArrayList<>(), litValue, AstNodeType.LIT);
+        }
+        return exprParamNode;
     }
 
 
