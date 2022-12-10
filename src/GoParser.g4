@@ -111,7 +111,8 @@ bfactor:
         | SNTX_PARANT_L bexpr SNTX_PARANT_R
         | LIT_BOOL
         | ID
-        | aexpr CMP_SMBL aexpr ;
+        | aexpr CMP_SMBL aexpr
+        | aexpr ;
 
 //arithmetic expression
 aexpr:
