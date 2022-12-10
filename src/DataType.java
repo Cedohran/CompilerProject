@@ -1,13 +1,7 @@
+import java.util.Set;
+
 public enum DataType {
-    INT("int"), STR("string"), BOOL("bool"), FLOAT("float64");
-
-    private final String name;
-
-    DataType(String name) {
-        this.name = name;
-    }
-
-    String getName() {
-        return name;
-    }
+    INT(), STR(), BOOL(), FLOAT(), UNDEF();
+    //some nice constants
+    public static Set<DataType> NUMBERS = Set.of(DataType.INT, DataType.FLOAT);
 }

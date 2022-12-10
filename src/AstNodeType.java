@@ -1,15 +1,8 @@
+import java.util.Set;
+
 public enum AstNodeType {
-    NON_TERMINAL("NON_TERMINAL"), ID("ID"), VAR_TYPE("VAR_TYPE"),
-    LIT("LIT"), OP("OP"), CMP_SMBL("cmp"), LGC_SMBL("lgc"),
-    NULL_NODE("null");
-
-    private final String name;
-
-    AstNodeType(String name) {
-        this.name = name;
-    }
-
-    String getName() {
-        return name;
-    }
+    NON_TERMINAL(), ID(), VAR_TYPE(), LIT(), OP(), CMP_SMBL(), LGC_SMBL(), NULL_NODE();
+    //some nice constants
+    public static Set<String> ARIT_CMP_SMBLS = Set.of("<", ">", "<=", ">=");
+    public static Set<String> EQ_SMBLS = Set.of("==", "!=");
 }

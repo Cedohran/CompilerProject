@@ -3,9 +3,10 @@ import java.util.Iterator;
 import java.util.List;
 
 public class AstNode {
-    String value = "?";
-    List<AstNode> children = new ArrayList<>();
-    AstNodeType nodeType;
+    private String value = "?";
+    private List<AstNode> children = new ArrayList<>();
+    private AstNodeType nodeType;
+    private DataType dataType = DataType.UNDEF;
 
     public AstNode() {}
 
@@ -23,8 +24,28 @@ public class AstNode {
         return nullNode;
     }
 
-    public DataType getDataType() {
-        return null;
+    public String getText() {
+        return value;
+    }
+
+    public List<AstNode> children() {
+        return children;
+    }
+
+    public AstNodeType nodeType() {
+        return nodeType;
+    }
+
+    public DataType dataType() {
+        if(value.equals("int")) return DataType.INT;
+        if(value.equals("string")) return DataType.STR;
+        if(value.equals("float64")) return DataType.FLOAT;
+        if(value.equals("bool")) return DataType.BOOL;
+        return dataType;
+    }
+
+    public void setDataType(DataType type) {
+        this.dataType = type;
     }
 
     public boolean hasChild(){

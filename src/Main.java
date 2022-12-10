@@ -9,7 +9,7 @@ import java.io.InputStream;
 
 public class Main {
     public static void main(String[] args) throws IOException {
-        InputStream input = new FileInputStream("input.txt");
+        InputStream input = new FileInputStream("visit.txt");
 
         GoLexer lexer = new GoLexer(CharStreams.fromStream(input));
         CommonTokenStream tokens = new CommonTokenStream( lexer );
@@ -25,6 +25,17 @@ public class Main {
 
         SymbolTableCreator symbolTableCreator = new SymbolTableCreator();
         walker.walk(symbolTableCreator, tree);
+
+        boolean typeError = false;
+        GoTypeChecker typeChecker = new GoTypeChecker(symbolTableCreator.symbolTableDataType);
+        try {
+            typeChecker.visit(astCreator.AST);
+        } catch (TypeCheckException e) {
+            System.err.println(e.getMessage());
+            typeError = true;
+        }
+
+        if(!typeError) System.out.println("TypeChecking success.");
 
         //System.out.println(parser.creator.programTree.toString());
 
