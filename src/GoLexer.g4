@@ -1,13 +1,13 @@
 lexer grammar GoLexer;
 
 //ignore comments and whitespaces
-COMMENT   : ('/''/'(.)*) -> skip ;
+COMMENT   : ('//'([a-z] | [A-Z] | [0-9] | ' ')*) -> skip ;
 SNTX_WHITE_SPC   : (' ' | '\t') -> skip;
 
 //literals
+LIT_STR     : '"' ([a-z] | [A-Z] | [0-9] | ' ')* '"' ;
 LIT_INT     : [0-9]+ ;
 LIT_FLOAT   : [0-9]+'.'[0-9]+ ;
-LIT_STR     : '"' ([a-z] | [A-Z] | ' ')* '"' ;
 LIT_BOOL    : 'true' | 'false' ;
 
 //arithmetic operators
