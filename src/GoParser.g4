@@ -79,7 +79,7 @@ var_assign:
 
 //>>>>>>>>>>if statement
 if_statement:
-        KEY_IF bexpr instruction_block else_statement ;
+        KEY_IF expr instruction_block else_statement ;
 
 else_statement:
         KEY_ELSE instruction_block
@@ -88,7 +88,7 @@ else_statement:
 
 //>>>>>>>>>>for loop
 for_loop:
-        KEY_FOR bexpr instruction_block ;
+        KEY_FOR expr instruction_block ;
 
 
 //>>>>>>>>>>expressions
