@@ -4,8 +4,6 @@ options {
     tokenVocab=GoLexer;
 }
 
-//TODO: newlines und whitespaces
-
 //>>>>>>>>>>main frame
 //main funktion zu erst! import und package static!
 program:
