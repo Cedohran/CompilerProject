@@ -8,8 +8,6 @@ public class SymbolTableCreator extends GoParserBaseListener {
     Map<String, DataType> symbolTableFuncReturn = new HashMap<>();
 
     //symbolTableFuncReturn
-
-
     @Override
     public void exitFunc(GoParser.FuncContext ctx) {
         if(ctx.func_ret_type() != null) {
