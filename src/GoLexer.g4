@@ -1,8 +1,9 @@
 lexer grammar GoLexer;
 
 //ignore comments and whitespaces
-COMMENT   : ('//'([a-z] | [A-Z] | [0-9] | ' ')*) -> skip ;
 SNTX_WHITE_SPC   : (' ' | '\t') -> skip;
+COMMENT   : ('//' ([a-z] | [A-Z] | [0-9] | ' ' | '\t')* '\n') -> skip ;
+COMMENT_BLOCK   : ('/*' ([a-z] | [A-Z] | [0-9] | ' ' | '\t' | '\n')* '*/') -> skip ;
 
 //literals
 LIT_STR     : '"' ([a-z] | [A-Z] | [0-9] | ' ')* '"' ;

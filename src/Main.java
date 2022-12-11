@@ -27,9 +27,9 @@ public class Main {
         walker.walk(symbolTableCreator, tree);
 
         boolean typeError = false;
-        GoTypeChecker typeChecker = new GoTypeChecker(symbolTableCreator.symbolTableDataType);
+        GoTypeChecker typeChecker = new GoTypeChecker(symbolTableCreator);
         try {
-            typeChecker.visit(astCreator.AST);
+            typeChecker.check(astCreator.AST);
         } catch (TypeCheckException e) {
             System.err.println(e.getMessage());
             typeError = true;

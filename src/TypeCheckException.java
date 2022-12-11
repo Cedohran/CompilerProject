@@ -1,6 +1,6 @@
 public class TypeCheckException extends Exception{
     public TypeCheckException(String message) {
-        super("TypeCheck Error: "+message);
+        super("Typecheck error: "+message);
     }
 
     @Override

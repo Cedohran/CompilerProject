@@ -39,7 +39,8 @@ func_param2:
 func_invoc:
         ID SNTX_PARANT_L expr SNTX_PARANT_R
         | ID SNTX_PARANT_L var_assign SNTX_PARANT_R
-        | ID SNTX_DOT func_invoc ;
+        | ID SNTX_DOT func_invoc
+        | ID SNTX_PARANT_L SNTX_PARANT_R ;
 
 func_return:
         KEY_RET expr ;
@@ -93,9 +94,7 @@ for_loop:
 
 //>>>>>>>>>>expressions
 expr:
-        bexpr
-        | aexpr ;
-//TODO: make (2+2) + (true||false) possible (?)
+        bexpr ;
 //boolean expression
 bexpr:
         bexpr LGC_OR bterm
@@ -104,15 +103,15 @@ bterm:
         bterm LGC_AND bcomp
         | bcomp ;
 bcomp:
-        bcomp CMP_SMBL bfactor
-        | bfactor ;
-bfactor:
+        bcomp CMP_SMBL aexpr
+        | aexpr ;
+/*bfactor:
         LGC_NOT bfactor
         | SNTX_PARANT_L bexpr SNTX_PARANT_R
         | LIT_BOOL
         | ID
         //| aexpr CMP_SMBL aexpr
-        | aexpr ;
+        | aexpr ;*/
 
 //arithmetic expression
 aexpr:
@@ -125,10 +124,10 @@ aterm:
         | aterm OP_MOD afactor
         | afactor ;
 afactor:
-        OP_ADD afactor
+        LGC_NOT afactor
+        | OP_ADD afactor
         | OP_SUB afactor
-        | SNTX_PARANT_L aexpr SNTX_PARANT_R
-        //TODO: | SNTX_PARANT_L bexpr SNTX_PARANT_R
+        | SNTX_PARANT_L bexpr SNTX_PARANT_R
         | expr_param ;
 
 //indirect terminal rules
