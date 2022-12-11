@@ -25,7 +25,7 @@ public class GoCompiler {
         ParseTreeWalker walker = new ParseTreeWalker();
 
         //AST creation
-        GoVisitorAstCreator astCreator =  new GoVisitorAstCreator();
+        VisitorAstCreator astCreator =  new VisitorAstCreator();
         try {
             walker.walk(astCreator, tree);
         } catch (Exception e) {
@@ -39,7 +39,7 @@ public class GoCompiler {
         walker.walk(symbolTableCreator, tree);
 
         //typechecking
-        GoTypeChecker typeChecker = new GoTypeChecker(symbolTableCreator);
+        TypeChecker typeChecker = new TypeChecker(symbolTableCreator);
         try {
             typeChecker.check(astCreator.AST);
         } catch (TypeCheckException e) {

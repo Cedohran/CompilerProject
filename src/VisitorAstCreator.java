@@ -1,7 +1,7 @@
 import java.util.ArrayList;
 import java.util.List;
 
-public class GoVisitorAstCreator extends GoParserBaseListener{
+public class VisitorAstCreator extends GoParserBaseListener{
     public AstNode AST = new AstNode(new ArrayList<>(), "program", AstNodeType.NON_TERMINAL);
 
     @Override

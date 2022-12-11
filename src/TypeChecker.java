@@ -1,9 +1,9 @@
-public class GoTypeChecker {
+public class TypeChecker {
     //symbol table for variables with corresponding data type
     SymbolTableCreator creator;
     private String funcContext = "";
 
-    GoTypeChecker(SymbolTableCreator symbolTableCreator) {
+    TypeChecker(SymbolTableCreator symbolTableCreator) {
         this.creator = symbolTableCreator;
     }
 
