@@ -57,7 +57,6 @@ instruction_block:
 
 instruction:
         optnl instruction_dec nl instruction
-        | nl
         | ;
 
 instruction_dec:
