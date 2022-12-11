@@ -7,7 +7,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class Main {
+public class GoCompiler {
     public static void main(String[] args) throws IOException {
         InputStream input = new FileInputStream("visit.txt");
 
