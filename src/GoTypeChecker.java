@@ -76,9 +76,16 @@ public class GoTypeChecker {
     }
 
     private DataType exprCheck(AstNode node) throws TypeCheckException {
+        //>>>>>>func_invoc_dot -> get return type of func_invoc child
+        if(node.getText().equals("func_invoc_dot")) {
+            return exprCheck(node.children().get(1));
+        }
         //>>>>>>func_invoc -> get return type of func
         if(node.getText().equals("func_invoc")) {
             String funcName = node.children().get(0).getText();
+            if(creator.symbolTableFuncReturn.get(funcName) == null) {
+                return DataType.UNDEF;
+            }
             return creator.symbolTableFuncReturn.get(funcName);
         }
         //>>>>>>reached terminal node
