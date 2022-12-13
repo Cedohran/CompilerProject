@@ -21,6 +21,7 @@ public class AstNode {
         nullNode.nodeType = AstNodeType.NULL_NODE;
         nullNode.children = new ArrayList<>();
         nullNode.value = "";
+        nullNode.dataType = DataType.UNDEF;
         return nullNode;
     }
 
@@ -46,6 +47,10 @@ public class AstNode {
 
     public void setDataType(DataType type) {
         this.dataType = type;
+    }
+
+    public void setText(String value) {
+        this.value = value;
     }
 
     public boolean hasChild(){

@@ -1,3 +1,6 @@
+import java.util.ArrayList;
+import java.util.List;
+
 public class TypeChecker {
     //symbol table for variables with corresponding data type
     SymbolTableCreator creator;
@@ -7,7 +10,7 @@ public class TypeChecker {
         this.creator = symbolTableCreator;
     }
 
-    public void check(AstNode astRoot) throws TypeCheckException {
+    public void check(AstNode astRoot) throws TypeCheckException, ParserException {
         //check if first function is main
         if(!astRoot.children().get(0).children().get(0).getText().equals("main")) {
             throw new TypeCheckException("first function must be 'main'");
@@ -15,7 +18,7 @@ public class TypeChecker {
         visit(astRoot);
     }
 
-    private void visit(AstNode node) throws TypeCheckException {
+    private void visit(AstNode node) throws TypeCheckException, ParserException {
         for(AstNode child : node.children()) {
             switch (child.getText()) {
                 case "func" -> funcContext = child.children().get(0).getText();
@@ -30,7 +33,7 @@ public class TypeChecker {
         }
     }
 
-    private void ifStatementCheck(AstNode node) throws TypeCheckException {
+    private void ifStatementCheck(AstNode node) throws TypeCheckException, ParserException {
         AstNode ifExpr = node.children().get(0);
         DataType ifExprType = exprCheck(ifExpr);
         if(ifExprType != DataType.BOOL) {
@@ -38,7 +41,7 @@ public class TypeChecker {
         }
     }
 
-    private void forLoopCheck(AstNode node) throws TypeCheckException {
+    private void forLoopCheck(AstNode node) throws TypeCheckException, ParserException {
         AstNode forExpr = node.children().get(0);
         DataType forExprType = exprCheck(forExpr);
         if(forExprType != DataType.BOOL) {
@@ -46,36 +49,81 @@ public class TypeChecker {
         }
     }
 
-    private void varInitCheck(AstNode node) throws TypeCheckException {
+    private void varInitCheck(AstNode node) throws TypeCheckException, ParserException {
         AstNode varId = node.children().get(0);
         AstNode varType = node.children().get(1);
         AstNode varExpr = node.children().get(2);
         DataType varShouldBe = varType.dataType();
-        if(varShouldBe != exprCheck(varExpr)) {
-            throw new TypeCheckException("wrong type by 'var "+ varId.getText() +" "+ varType.getText() +"' unable to assign "+ exprCheck(varExpr) +" value");
+        DataType varExprType = exprCheck(varExpr);
+        //implicit typecast int->float or float->int
+        if(DataType.NUMBERS.contains(varShouldBe) && DataType.NUMBERS.contains(varExprType)) {
+            return;
+        }
+        if(varShouldBe != varExprType) {
+            throw new TypeCheckException("wrong type by 'var "+ varId.getText() +" "+ varType.getText() +"' unable to assign "+ varExprType +" value");
         }
     }
 
-    private void varAssignCheck(AstNode node) throws TypeCheckException {
-        DataType varIdType = creator.symbolTableVar.get(node.children().get(0).getText());
+    private DataType varAssignCheck(AstNode node) throws TypeCheckException, ParserException {
+        DataType varType = creator.symbolTableVar.get(node.children().get(0).getText());
+        if(varType == null) {
+            throw new ParserException("unknown variable "+node.children().get(0).getText());
+        }
         DataType exprType = exprCheck(node.children().get(1));
-        if(varIdType != exprType) {
-            throw new TypeCheckException("unable to assign "+ exprType +" value to "+ varIdType +" variable.");
+        if(varType != exprType) {
+            throw new TypeCheckException("unable to assign "+ exprType +" value to "+ varType +" variable.");
         }
+        return varType;
     }
 
-    private void funcInvocCheck(AstNode node) {
+    private void funcInvocCheck(AstNode node) throws ParserException, TypeCheckException {
+        String funcId = node.children().get(0).getText();
+        //Println() joker
+        if(funcId.equals("Println")) return;
+
+        List<DataType> funcInvocParamList = new ArrayList<>();
+        List<DataType> actualParamList = creator.symbolTableFuncParam.get(funcId);
+        if(actualParamList == null) actualParamList = new ArrayList<>();
+
+        if(node.children().size() == 2) {
+            funcInvocParamList.addAll(getFuncInvocParam(node.children().get(1)));
+        }
+        if(actualParamList.size() != funcInvocParamList.size()) {
+            throw new ParserException("wrong number of parameters at function call "+funcId+"()");
+        }
+        for(int i = 0; i < actualParamList.size(); i++) {
+            //both numbers
+            if(DataType.NUMBERS.contains(actualParamList.get(i)) && DataType.NUMBERS.contains(funcInvocParamList.get(i))) {
+            }
+            else if(actualParamList.get(i) != funcInvocParamList.get(i)) {
+                throw new TypeCheckException("wrong parameter type at function call "+funcId+"()");
+            }
+        }
 
     }
 
-    private void funcReturnCheck(AstNode node) throws TypeCheckException {
+    private List<DataType> getFuncInvocParam(AstNode funcInvocParamNode) throws ParserException, TypeCheckException {
+        List<DataType> funcInvocParamList = new ArrayList<>();
+        AstNode expr = funcInvocParamNode.children().get(0);
+        if(expr.getText().equals("var_assign")) {
+            funcInvocParamList.add(varAssignCheck(expr));
+        } else {
+            funcInvocParamList.add(exprCheck(expr));
+        }
+        if(funcInvocParamNode.children().size() == 2) {
+            funcInvocParamList.addAll(getFuncInvocParam(funcInvocParamNode.children().get(1)));
+        }
+        return funcInvocParamList;
+    }
+
+    private void funcReturnCheck(AstNode node) throws TypeCheckException, ParserException {
         DataType retExprType = exprCheck(node.children().get(0));
         if(retExprType != creator.symbolTableFuncReturn.get(funcContext)) {
             throw new TypeCheckException("wrong return type for return in function "+funcContext);
         }
     }
 
-    private DataType exprCheck(AstNode node) throws TypeCheckException {
+    private DataType exprCheck(AstNode node) throws TypeCheckException, ParserException {
         //>>>>>>func_invoc_dot -> get return type of func_invoc child
         if(node.getText().equals("func_invoc_dot")) {
             return exprCheck(node.children().get(1));
@@ -92,7 +140,11 @@ public class TypeChecker {
         if(node.children().isEmpty()) {
             //id check
             if(node.nodeType() == AstNodeType.ID) {
-                return creator.symbolTableVar.get(node.getText());
+                if(creator.symbolTableVar.get(node.getText()) == null) {
+                    throw new ParserException("unknown variable "+node.getText());
+                } else {
+                    return creator.symbolTableVar.get(node.getText());
+                }
             } else {
                 return node.dataType();
             }

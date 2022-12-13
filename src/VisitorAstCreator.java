@@ -43,16 +43,10 @@ public class VisitorAstCreator extends GoParserBaseListener{
     //func_invoc
     private AstNode funcInvoc(GoParser.Func_invocContext ctx) {
         AstNode funcInvocNode;
-        if(ctx.expr() != null) {
+        if(ctx.func_invoc_param() != null) {
             funcInvocNode = new AstNode(List.of(
                     new AstNode(new ArrayList<>(),ctx.ID().getText(), AstNodeType.ID),
-                    expr(ctx.expr())),
-                    "func_invoc",
-                    AstNodeType.NON_TERMINAL);
-        } else if(ctx.var_assign() != null) {
-            funcInvocNode = new AstNode(List.of(
-                    new AstNode(new ArrayList<>(),ctx.ID().getText(), AstNodeType.ID),
-                    varAssign(ctx.var_assign())),
+                    funcInvocParam(ctx.func_invoc_param())),
                     "func_invoc",
                     AstNodeType.NON_TERMINAL);
         } else if(ctx.SNTX_DOT() != null){
@@ -69,6 +63,30 @@ public class VisitorAstCreator extends GoParserBaseListener{
         }
         return funcInvocNode;
     }
+    //func_invoc_param --> nullable
+    private AstNode funcInvocParam(GoParser.Func_invoc_paramContext ctx) {
+        if(ctx.func_invoc_param2() == null) return AstNode.createNullNode();
+        AstNode funcInvocParamNode;
+        if(ctx.expr() != null) {
+            funcInvocParamNode = new AstNode(List.of(
+                    expr(ctx.expr()),
+                    funcInvocParam2(ctx.func_invoc_param2())),
+                    "func_invoc_param",
+                    AstNodeType.NON_TERMINAL);
+        } else {
+            funcInvocParamNode = new AstNode(List.of(
+                    varAssign(ctx.var_assign()),
+                    funcInvocParam2(ctx.func_invoc_param2())),
+                    "func_invoc_param",
+                    AstNodeType.NON_TERMINAL);
+        }
+        return funcInvocParamNode;
+    }
+    //func_invoc_param2 --> nullable
+    private AstNode funcInvocParam2(GoParser.Func_invoc_param2Context ctx) {
+        if(ctx.func_invoc_param() == null) return AstNode.createNullNode();
+        return funcInvocParam(ctx.func_invoc_param());
+    }
     //func_return
     private AstNode funcReturn(GoParser.Func_returnContext ctx) {
         return new AstNode(List.of(
@@ -76,7 +94,7 @@ public class VisitorAstCreator extends GoParserBaseListener{
                 "func_return",
                 AstNodeType.NON_TERMINAL);
     }
-    //func_ret_type -> nullable
+    //func_ret_type -> nullable  TODO: direkt die VAR_TYPE-Node zurückgeben?
     private AstNode funcRetType(GoParser.Func_ret_typeContext ctx){
         if(ctx.VAR_TYPE() == null) return AstNode.createNullNode();
         return new AstNode(List.of(

@@ -6,7 +6,7 @@ COMMENT   : ('//' ~[\r\n]*) -> skip ;
 COMMENT_BLOCK   : ('/*' ~[*]* '*/') -> skip ;
 
 //literals
-LIT_STR     : '"' ([a-z] | [A-Z] | [0-9] | ' ')* '"' ;
+LIT_STR     : '"' ~["]* '"' ;
 LIT_INT     : [0-9]+ ;
 LIT_FLOAT   : [0-9]+'.'[0-9]+ ;
 LIT_BOOL    : 'true' | 'false' ;

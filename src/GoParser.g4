@@ -5,7 +5,6 @@ options {
 }
 
 //>>>>>>>>>>main frame
-//main funktion zu erst! import und package static!
 program:
         pkg impt /*func_main*/ func EOF;
 
@@ -35,10 +34,17 @@ func_param2:
         | ;
 
 func_invoc:
-        ID SNTX_PARANT_L expr SNTX_PARANT_R
-        | ID SNTX_PARANT_L var_assign SNTX_PARANT_R
-        | ID SNTX_DOT func_invoc
-        | ID SNTX_PARANT_L SNTX_PARANT_R ;
+        ID SNTX_PARANT_L func_invoc_param SNTX_PARANT_R
+        | ID SNTX_DOT func_invoc ;
+
+func_invoc_param:
+        | expr func_invoc_param2
+        | var_assign func_invoc_param2
+        | ;
+
+func_invoc_param2:
+        SNTX_COMMA func_invoc_param
+        | ;
 
 func_return:
         KEY_RET expr ;

@@ -42,7 +42,7 @@ public class GoCompiler {
         TypeChecker typeChecker = new TypeChecker(symbolTableCreator);
         try {
             typeChecker.check(astCreator.AST);
-        } catch (TypeCheckException e) {
+        } catch (TypeCheckException | ParserException e) {
             System.err.println(e.getMessage());
             System.exit(1);
         }

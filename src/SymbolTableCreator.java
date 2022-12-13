@@ -6,6 +6,17 @@ public class SymbolTableCreator extends GoParserBaseListener {
     //symbol table for variables with corresponding data type
     Map<String, DataType> symbolTableVar = new HashMap<>();
     Map<String, DataType> symbolTableFuncReturn = new HashMap<>();
+    Map<String, List<DataType>> symbolTableFuncParam = new HashMap<>();
+
+    //helper
+    String currentFunc = "";
+
+    @Override
+    public void enterFunc(GoParser.FuncContext ctx) {
+        if(ctx.ID() == null) return;
+        currentFunc = ctx.ID().getText();
+        symbolTableFuncParam.put(currentFunc, new ArrayList<>());
+    }
 
     //symbolTableFuncReturn
     @Override
@@ -27,19 +38,21 @@ public class SymbolTableCreator extends GoParserBaseListener {
     }
 
     @Override
-    public void exitFunc_param(GoParser.Func_paramContext ctx) {
+    public void enterFunc_param(GoParser.Func_paramContext ctx) {
         //function without parameters
         if(ctx.VAR_TYPE() == null) return;
         DataType type = getVarDataType(ctx.VAR_TYPE());
         symbolTableVar.put(ctx.ID().getText(), type);
+        symbolTableFuncParam.get(currentFunc).add(type);
     }
 
     @Override
-    public void exitFunc_param2(GoParser.Func_param2Context ctx) {
+    public void enterFunc_param2(GoParser.Func_param2Context ctx) {
         //function without parameters
         if(ctx.VAR_TYPE() == null) return;
         DataType type = getVarDataType(ctx.VAR_TYPE());
         symbolTableVar.put(ctx.ID().getText(), type);
+        symbolTableFuncParam.get(currentFunc).add(type);
     }
 
     private DataType getVarDataType(TerminalNode varType){
