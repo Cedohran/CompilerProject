@@ -49,7 +49,6 @@ KEY_PKG         : 'package' ;
 KEY_IMPORT      : 'import' ;
 KEY_FUNC        : 'func' ;
 KEY_RET         : 'return' ;
-//KEY_MAIN        : 'main' ;
 KEY_VAR_ASSGN   : '=' ;
 
 //identifier (must be last)

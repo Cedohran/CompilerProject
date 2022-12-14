@@ -6,7 +6,7 @@ options {
 
 //>>>>>>>>>>main frame
 program:
-        pkg impt /*func_main*/ func EOF;
+        pkg impt func EOF;
 
 pkg:
         KEY_PKG ID nl;
@@ -18,9 +18,6 @@ impt:
 
 
 //>>>>>>>>>>functions
-/*func_main:
-        KEY_FUNC ws KEY_MAIN SNTX_PARANT_L SNTX_PARANT_R ws SNTX_BRACE_L instruction SNTX_BRACE_R nl;
-*/
 func:   // func name(param0 type0, param1 type1, ...) returntype {...}
         KEY_FUNC ID SNTX_PARANT_L func_param SNTX_PARANT_R func_ret_type instruction_block optnl func
         | ;
@@ -71,7 +68,6 @@ instruction_dec:
         | var_assign
         | func_invoc
         | func_return ;
-        //| expr {creator.expr();} ;
 
 
 //>>>>>>>>>>variables
@@ -99,6 +95,7 @@ for_loop:
 //>>>>>>>>>>expressions
 expr:
         bexpr ;
+
 //boolean expression
 bexpr:
         bexpr LGC_OR bterm
@@ -109,13 +106,6 @@ bterm:
 bcomp:
         bcomp CMP_SMBL aexpr
         | aexpr ;
-/*bfactor:
-        LGC_NOT bfactor
-        | SNTX_PARANT_L bexpr SNTX_PARANT_R
-        | LIT_BOOL
-        | ID
-        //| aexpr CMP_SMBL aexpr
-        | aexpr ;*/
 
 //arithmetic expression
 aexpr:
