@@ -99,7 +99,7 @@ public class VisitorAstCreator extends GoParserBaseListener{
                 "func_return",
                 AstNodeType.NON_TERMINAL);
     }
-    //func_ret_type -> nullable  TODO: direkt die VAR_TYPE-Node zurückgeben?
+    //func_ret_type -> nullable
     private AstNode funcRetType(GoParser.Func_ret_typeContext ctx){
         if(ctx.VAR_TYPE() == null) return AstNode.createNullNode();
         return new AstNode(List.of(
