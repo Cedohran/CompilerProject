@@ -58,8 +58,7 @@ func_ret_type:
 
 //>>>>>>>>>>instructions
 instruction_block:
-        optnl SNTX_BRACE_L optnl instruction optnl SNTX_BRACE_R optnl
-        | ;
+        optnl SNTX_BRACE_L optnl instruction optnl SNTX_BRACE_R optnl ;
 
 instruction:
         optnl instruction_dec nl instruction
