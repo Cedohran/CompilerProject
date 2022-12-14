@@ -4,9 +4,13 @@ import java.util.*;
 
 public class SymbolTableCreator extends GoParserBaseListener {
     //symbol table for variables with corresponding data type
-    Map<String, DataType> symbolTableVar = new HashMap<>();
+    //Map<String, DataType> symbolTableVar = new HashMap<>();
+    //return type of function
     Map<String, DataType> symbolTableFuncReturn = new HashMap<>();
+    //parameters(types as list) of function
     Map<String, List<DataType>> symbolTableFuncParam = new HashMap<>();
+    //all initialised variables(name,type) and parameters(name,type) available in function scope
+    Map<String, Map<String, DataType>> funcScopeTable = new HashMap<>();
 
     //helper
     String currentFunc = "";
@@ -15,7 +19,13 @@ public class SymbolTableCreator extends GoParserBaseListener {
     public void enterFunc(GoParser.FuncContext ctx) {
         if(ctx.ID() == null) return;
         currentFunc = ctx.ID().getText();
+        //if function already declared throw error
+        if(funcScopeTable.get(currentFunc) != null) {
+            //throw new ParseException("function "+currentFunc+" already declared.");
+        }
+
         symbolTableFuncParam.put(currentFunc, new ArrayList<>());
+        funcScopeTable.put(currentFunc, new HashMap<>());
     }
 
     //symbolTableFuncReturn
@@ -30,28 +40,37 @@ public class SymbolTableCreator extends GoParserBaseListener {
         }
     }
 
-    //symbolTableVar (variable and parameter name+type)
+    //add var to function variable table
     @Override
-    public void exitVar_init(GoParser.Var_initContext ctx) {
+    public void enterVar_init(GoParser.Var_initContext ctx) {
+        String varId = ctx.ID().getText();
         DataType type = getVarDataType(ctx.VAR_TYPE());
-        symbolTableVar.put(ctx.ID().getText(), type);
+        Map<String, DataType> currentVarTable = funcScopeTable.get(currentFunc);
+
+        currentVarTable.put(varId, type);
     }
 
     @Override
     public void enterFunc_param(GoParser.Func_paramContext ctx) {
         //function without parameters
         if(ctx.VAR_TYPE() == null) return;
+        String varId = ctx.ID().getText();
         DataType type = getVarDataType(ctx.VAR_TYPE());
-        symbolTableVar.put(ctx.ID().getText(), type);
+        Map<String, DataType> currentVarTable = funcScopeTable.get(currentFunc);
+
+        currentVarTable.put(varId, type);
         symbolTableFuncParam.get(currentFunc).add(type);
     }
 
     @Override
     public void enterFunc_param2(GoParser.Func_param2Context ctx) {
-        //function without parameters
+        //only one param
         if(ctx.VAR_TYPE() == null) return;
+        String varId = ctx.ID().getText();
         DataType type = getVarDataType(ctx.VAR_TYPE());
-        symbolTableVar.put(ctx.ID().getText(), type);
+        Map<String, DataType> currentVarTable = funcScopeTable.get(currentFunc);
+
+        currentVarTable.put(varId, type);
         symbolTableFuncParam.get(currentFunc).add(type);
     }
 

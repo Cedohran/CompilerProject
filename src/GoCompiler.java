@@ -1,5 +1,6 @@
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
@@ -17,22 +18,36 @@ public class GoCompiler {
 
         //lexing
         GoLexer lexer = new GoLexer(CharStreams.fromStream(input));
-        CommonTokenStream tokens = new CommonTokenStream( lexer );
-
+        lexer.removeErrorListeners();
+        lexer.addErrorListener(ThrowingErrorListener.INSTANCE);
+        CommonTokenStream tokens = null;
+        try {
+            tokens = new CommonTokenStream(lexer);
+        } catch(ParseCancellationException e) {
+            System.err.println(e.getMessage());
+            System.exit(1);
+        }
         //parsing
         GoParser parser = new GoParser( tokens );
-        ParseTree tree = parser.program();
-        ParseTreeWalker walker = new ParseTreeWalker();
+        parser.removeErrorListeners();
+        parser.addErrorListener(ThrowingErrorListener.INSTANCE);
+        ParseTree tree = null;
+        try {
+            tree = parser.program();
+        } catch(ParseCancellationException e) {
+            System.err.println(e.getMessage());
+            System.exit(1);
+        }
 
         //AST creation
+        ParseTreeWalker walker = new ParseTreeWalker();
         VisitorAstCreator astCreator =  new VisitorAstCreator();
         try {
             walker.walk(astCreator, tree);
         } catch (Exception e) {
-            System.err.println("Parsing failed.");
+            System.err.println("Parsing failed at AST creation.");
             System.exit(1);
         }
-        System.out.println("Parsing success.");
 
         //symbol table creation
         SymbolTableCreator symbolTableCreator = new SymbolTableCreator();
@@ -42,10 +57,12 @@ public class GoCompiler {
         TypeChecker typeChecker = new TypeChecker(symbolTableCreator);
         try {
             typeChecker.check(astCreator.AST);
-        } catch (TypeCheckException | ParserException e) {
+        } catch (ParseException | TypeCheckException  e) {
             System.err.println(e.getMessage());
             System.exit(1);
         }
+
+        System.out.println("Parsing success.");
         System.out.println("Typechecking success.");
 
         //optional AST to std.out

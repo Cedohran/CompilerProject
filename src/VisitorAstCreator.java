@@ -89,6 +89,11 @@ public class VisitorAstCreator extends GoParserBaseListener{
     }
     //func_return
     private AstNode funcReturn(GoParser.Func_returnContext ctx) {
+        if(ctx.expr() == null) {
+            return new AstNode(new ArrayList<>(),
+                    "func_return",
+                    AstNodeType.NON_TERMINAL);
+        }
         return new AstNode(List.of(
                 expr(ctx.expr())),
                 "func_return",

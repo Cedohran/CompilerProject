@@ -47,7 +47,9 @@ func_invoc_param2:
         | ;
 
 func_return:
-        KEY_RET expr ;
+        KEY_RET expr
+        | KEY_RET SNTX_PARANT_L SNTX_PARANT_R
+        | KEY_RET ;
 
 func_ret_type:
         VAR_TYPE
