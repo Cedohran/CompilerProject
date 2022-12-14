@@ -10,7 +10,7 @@ public class TypeChecker {
         this.creator = symbolTableCreator;
     }
 
-    public void check(AstNode astRoot) throws TypeCheckException, ParseException {
+    public void check(AstNode astRoot) throws TypeCheckException, GoParseException {
         //check if first function is main
         if(!astRoot.children().get(0).children().get(0).getText().equals("main")) {
             throw new TypeCheckException("first function must be 'main'");
@@ -18,7 +18,7 @@ public class TypeChecker {
         visit(astRoot);
     }
 
-    private void visit(AstNode node) throws TypeCheckException, ParseException {
+    private void visit(AstNode node) throws TypeCheckException, GoParseException {
         for(AstNode child : node.children()) {
             switch (child.getText()) {
                 case "func" -> currentFunc = child.children().get(0).getText();
@@ -33,7 +33,7 @@ public class TypeChecker {
         }
     }
 
-    private void ifStatementCheck(AstNode node) throws TypeCheckException, ParseException {
+    private void ifStatementCheck(AstNode node) throws TypeCheckException, GoParseException {
         AstNode ifExpr = node.children().get(0);
         DataType ifExprType = exprCheck(ifExpr);
         if(ifExprType != DataType.BOOL) {
@@ -41,7 +41,7 @@ public class TypeChecker {
         }
     }
 
-    private void forLoopCheck(AstNode node) throws TypeCheckException, ParseException {
+    private void forLoopCheck(AstNode node) throws TypeCheckException, GoParseException {
         AstNode forExpr = node.children().get(0);
         DataType forExprType = exprCheck(forExpr);
         if(forExprType != DataType.BOOL) {
@@ -49,7 +49,7 @@ public class TypeChecker {
         }
     }
 
-    private void varInitCheck(AstNode node) throws TypeCheckException, ParseException {
+    private void varInitCheck(AstNode node) throws TypeCheckException, GoParseException {
         AstNode varId = node.children().get(0);
         AstNode varType = node.children().get(1);
         AstNode varExpr = node.children().get(2);
@@ -65,10 +65,10 @@ public class TypeChecker {
         }
     }
 
-    private DataType varAssignCheck(AstNode node) throws TypeCheckException, ParseException {
+    private DataType varAssignCheck(AstNode node) throws TypeCheckException, GoParseException {
         DataType varType = creator.funcScopeTable.get(currentFunc).get(node.children().get(0).getText());
         if(varType == null) {
-            throw new ParseException("unknown variable "+node.children().get(0).getText());
+            throw new GoParseException("unknown variable "+node.children().get(0).getText());
         }
         DataType exprType = exprCheck(node.children().get(1));
         if(varType != exprType) {
@@ -77,7 +77,7 @@ public class TypeChecker {
         return varType;
     }
 
-    private void funcInvocCheck(AstNode node) throws ParseException, TypeCheckException {
+    private void funcInvocCheck(AstNode node) throws GoParseException, TypeCheckException {
         String funcId = node.children().get(0).getText();
         //Println() joker
         if(funcId.equals("Println")) return;
@@ -90,7 +90,7 @@ public class TypeChecker {
             funcInvocParamList.addAll(getFuncInvocParam(node.children().get(1)));
         }
         if(actualParamList.size() != funcInvocParamList.size()) {
-            throw new ParseException("wrong number of parameters at function call "+funcId+"()");
+            throw new GoParseException("wrong number of parameters at function call "+funcId+"()");
         }
         for(int i = 0; i < actualParamList.size(); i++) {
             //both numbers
@@ -104,7 +104,7 @@ public class TypeChecker {
 
     }
 
-    private List<DataType> getFuncInvocParam(AstNode funcInvocParamNode) throws ParseException, TypeCheckException {
+    private List<DataType> getFuncInvocParam(AstNode funcInvocParamNode) throws GoParseException, TypeCheckException {
         List<DataType> funcInvocParamList = new ArrayList<>();
         AstNode expr = funcInvocParamNode.children().get(0);
         if(expr.getText().equals("var_assign")) {
@@ -118,7 +118,7 @@ public class TypeChecker {
         return funcInvocParamList;
     }
 
-    private void funcReturnCheck(AstNode node) throws TypeCheckException, ParseException {
+    private void funcReturnCheck(AstNode node) throws TypeCheckException, GoParseException {
         DataType retExprType = DataType.UNDEF;
         DataType funcRetType = DataType.UNDEF;
         //check if return type is empty
@@ -138,7 +138,7 @@ public class TypeChecker {
         }
     }
 
-    private DataType exprCheck(AstNode node) throws TypeCheckException, ParseException {
+    private DataType exprCheck(AstNode node) throws TypeCheckException, GoParseException {
         //>>>>>>func_invoc_dot -> get return type of func_invoc child
         if(node.getText().equals("func_invoc_dot")) {
             return exprCheck(node.children().get(1));
@@ -156,7 +156,7 @@ public class TypeChecker {
             //id check
             if(node.nodeType() == AstNodeType.ID) {
                 if(creator.funcScopeTable.get(currentFunc).get(node.getText()) == null) {
-                    throw new ParseException("unknown variable "+node.getText());
+                    throw new GoParseException("unknown variable "+node.getText());
                 } else {
                     return creator.funcScopeTable.get(currentFunc).get(node.getText());
                 }

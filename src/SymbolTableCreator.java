@@ -15,10 +15,10 @@ public class SymbolTableCreator extends GoParserBaseListener {
     String currentFunc = "";
 
     //can't overwrite function signature -> save exception for later throw
-    ParseException exception = null;
+    GoParseException exception = null;
 
     //throw manually
-    public void problems() throws ParseException {
+    public void problems() throws GoParseException {
         if(exception != null)
             throw exception;
     }
@@ -30,7 +30,7 @@ public class SymbolTableCreator extends GoParserBaseListener {
         //if function already declared throw error
         if(funcScopeTable.get(currentFunc) != null) {
             if(exception == null)
-                exception = new ParseException("function "+currentFunc+" already declared.");
+                exception = new GoParseException("function "+currentFunc+" already declared.");
             return;
         }
         symbolTableFuncParam.put(currentFunc, new ArrayList<>());
@@ -57,7 +57,7 @@ public class SymbolTableCreator extends GoParserBaseListener {
         Map<String, DataType> currentVarTable = funcScopeTable.get(currentFunc);
         //variable name already used
         if(currentVarTable.get(varId) != null) {
-            exception = new ParseException("variable "+varId+" already declared in function "+currentFunc);
+            exception = new GoParseException("variable "+varId+" already declared in function "+currentFunc);
             return;
         }
         currentVarTable.put(varId, type);
@@ -73,7 +73,7 @@ public class SymbolTableCreator extends GoParserBaseListener {
         Map<String, DataType> currentVarTable = funcScopeTable.get(currentFunc);
         //variable name already used
         if(currentVarTable.get(varId) != null) {
-            exception = new ParseException("variable "+varId+" already declared in function "+currentFunc);
+            exception = new GoParseException("variable "+varId+" already declared in function "+currentFunc);
             return;
         }
         currentVarTable.put(varId, type);
@@ -87,7 +87,7 @@ public class SymbolTableCreator extends GoParserBaseListener {
         Map<String, DataType> currentVarTable = funcScopeTable.get(currentFunc);
         //variable name already used
         if(currentVarTable.get(varId) != null) {
-            exception = new ParseException("variable "+varId+" already declared in function "+currentFunc);
+            exception = new GoParseException("variable "+varId+" already declared in function "+currentFunc);
             return;
         }
         currentVarTable.put(varId, type);

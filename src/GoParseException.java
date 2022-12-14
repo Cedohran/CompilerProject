@@ -1,5 +1,5 @@
-public class ParseException extends Exception{
-    public ParseException(String message) {
+public class GoParseException extends Exception{
+    public GoParseException(String message) {
         super("Parse error:\n"+message);
     }
 
