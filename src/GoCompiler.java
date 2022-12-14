@@ -27,6 +27,7 @@ public class GoCompiler {
             System.err.println(e.getMessage());
             System.exit(1);
         }
+
         //parsing
         GoParser parser = new GoParser( tokens );
         parser.removeErrorListeners();
@@ -52,6 +53,12 @@ public class GoCompiler {
         //symbol table creation
         SymbolTableCreator symbolTableCreator = new SymbolTableCreator();
         walker.walk(symbolTableCreator, tree);
+        try {
+            symbolTableCreator.problems();
+        } catch(ParseException e) {
+            System.err.println(e.getMessage());
+            System.exit(1);
+        }
 
         //typechecking
         TypeChecker typeChecker = new TypeChecker(symbolTableCreator);

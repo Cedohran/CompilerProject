@@ -11,9 +11,17 @@ public class SymbolTableCreator extends GoParserBaseListener {
     Map<String, List<DataType>> symbolTableFuncParam = new HashMap<>();
     //all initialised variables(name,type) and parameters(name,type) available in function scope
     Map<String, Map<String, DataType>> funcScopeTable = new HashMap<>();
-
-    //helper
+    //current function for scope
     String currentFunc = "";
+
+    //can't overwrite function signature -> save exception for later throw
+    ParseException exception = null;
+
+    //throw manually
+    public void problems() throws ParseException {
+        if(exception != null)
+            throw exception;
+    }
 
     @Override
     public void enterFunc(GoParser.FuncContext ctx) {
@@ -21,14 +29,14 @@ public class SymbolTableCreator extends GoParserBaseListener {
         currentFunc = ctx.ID().getText();
         //if function already declared throw error
         if(funcScopeTable.get(currentFunc) != null) {
-            //throw new ParseException("function "+currentFunc+" already declared.");
+            if(exception == null)
+                exception = new ParseException("function "+currentFunc+" already declared.");
+            return;
         }
-
         symbolTableFuncParam.put(currentFunc, new ArrayList<>());
         funcScopeTable.put(currentFunc, new HashMap<>());
     }
 
-    //symbolTableFuncReturn
     @Override
     public void exitFunc(GoParser.FuncContext ctx) {
         if(ctx.func_ret_type() != null) {
@@ -40,16 +48,6 @@ public class SymbolTableCreator extends GoParserBaseListener {
         }
     }
 
-    //add var to function variable table
-    @Override
-    public void enterVar_init(GoParser.Var_initContext ctx) {
-        String varId = ctx.ID().getText();
-        DataType type = getVarDataType(ctx.VAR_TYPE());
-        Map<String, DataType> currentVarTable = funcScopeTable.get(currentFunc);
-
-        currentVarTable.put(varId, type);
-    }
-
     @Override
     public void enterFunc_param(GoParser.Func_paramContext ctx) {
         //function without parameters
@@ -57,7 +55,11 @@ public class SymbolTableCreator extends GoParserBaseListener {
         String varId = ctx.ID().getText();
         DataType type = getVarDataType(ctx.VAR_TYPE());
         Map<String, DataType> currentVarTable = funcScopeTable.get(currentFunc);
-
+        //variable name already used
+        if(currentVarTable.get(varId) != null) {
+            exception = new ParseException("variable "+varId+" already declared in function "+currentFunc);
+            return;
+        }
         currentVarTable.put(varId, type);
         symbolTableFuncParam.get(currentFunc).add(type);
     }
@@ -69,9 +71,26 @@ public class SymbolTableCreator extends GoParserBaseListener {
         String varId = ctx.ID().getText();
         DataType type = getVarDataType(ctx.VAR_TYPE());
         Map<String, DataType> currentVarTable = funcScopeTable.get(currentFunc);
-
+        //variable name already used
+        if(currentVarTable.get(varId) != null) {
+            exception = new ParseException("variable "+varId+" already declared in function "+currentFunc);
+            return;
+        }
         currentVarTable.put(varId, type);
         symbolTableFuncParam.get(currentFunc).add(type);
+    }
+
+    @Override
+    public void enterVar_init(GoParser.Var_initContext ctx) {
+        String varId = ctx.ID().getText();
+        DataType type = getVarDataType(ctx.VAR_TYPE());
+        Map<String, DataType> currentVarTable = funcScopeTable.get(currentFunc);
+        //variable name already used
+        if(currentVarTable.get(varId) != null) {
+            exception = new ParseException("variable "+varId+" already declared in function "+currentFunc);
+            return;
+        }
+        currentVarTable.put(varId, type);
     }
 
     private DataType getVarDataType(TerminalNode varType){
