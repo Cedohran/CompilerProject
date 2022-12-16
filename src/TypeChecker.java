@@ -236,10 +236,6 @@ public class TypeChecker {
     }
 
     private boolean numCastPossible(DataType type1, DataType type2) {
-        if(DataType.NUMBERS.contains(type1) && DataType.NUMBERS.contains(type2)) {
-            return true;
-        } else {
-            return false;
-        }
+        return DataType.NUMBERS.contains(type1) && DataType.NUMBERS.contains(type2);
     }
 }
