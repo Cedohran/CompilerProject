@@ -50,18 +50,18 @@ public class TypeChecker {
     }
 
     private void varInitCheck(AstNode node) throws TypeCheckException, GoParseException {
-        AstNode varId = node.children().get(0);
-        AstNode varType = node.children().get(1);
-        AstNode varExpr = node.children().get(2);
-        DataType varShouldBe = varType.dataType();
-        DataType varExprType = exprCheck(varExpr);
+        AstNode varIdNode = node.children().get(0);
+        AstNode varTypeNode = node.children().get(1);
+        AstNode varExprNode = node.children().get(2);
+        DataType varType = varTypeNode.dataType();
+        DataType exprType = exprCheck(varExprNode);
         //implicit typecast int->float or float->int
         //check typecast
-        if(numCastPossible(varShouldBe, varExprType)) {
+        if(numCastPossible(varType, exprType)) {
             return;
         }
-        if(varShouldBe != varExprType) {
-            throw new TypeCheckException("wrong type by 'var "+ varId.getText() +" "+ varType.getText() +"' unable to assign "+ varExprType +" value");
+        if(varType != exprType) {
+            throw new TypeCheckException("wrong type by 'var "+ varIdNode.getText() +" "+ varTypeNode.getText() +"' unable to assign "+ exprType +" value");
         }
     }
 
@@ -71,6 +71,13 @@ public class TypeChecker {
             throw new GoParseException("unknown variable "+node.children().get(0).getText());
         }
         DataType exprType = exprCheck(node.children().get(1));
+        //check typecast
+        if(numCastPossible(varType, exprType)) {
+            if(varType==DataType.FLOAT || exprType == DataType.FLOAT) {
+                return DataType.FLOAT;
+            }
+            return DataType.INT;
+        }
         if(varType != exprType) {
             throw new TypeCheckException("unable to assign "+ exprType +" value to "+ varType +" variable.");
         }
