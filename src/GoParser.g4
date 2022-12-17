@@ -6,7 +6,7 @@ options {
 
 //>>>>>>>>>>main frame
 program:
-        pkg impt func EOF;
+        optnl pkg impt func EOF;
 
 pkg:
         KEY_PKG ID nl;
