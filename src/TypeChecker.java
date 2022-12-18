@@ -13,7 +13,7 @@ public class TypeChecker {
     public void check(AstNode astRoot) throws TypeCheckException, GoParseException {
         //check if first function is main
         if(!astRoot.children().get(0).children().get(0).getText().equals("main")) {
-            throw new TypeCheckException("Function 'main' in package main not found.");
+            throw new GoParseException("Function 'main' in package main not found.");
         }
         visit(astRoot);
     }

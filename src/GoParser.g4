@@ -35,7 +35,7 @@ func_invoc:
         | ID SNTX_DOT func_invoc ;
 
 func_invoc_param:
-        | expr func_invoc_param2
+        expr func_invoc_param2
         | var_assign func_invoc_param2
         | ;
 
