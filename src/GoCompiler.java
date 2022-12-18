@@ -114,6 +114,8 @@ public class GoCompiler {
         System.out.println("Parsing success.");
         System.out.println("Typechecking success.");
 
+        //TODO: Kontrollflussanalyse
+
         //optional AST to std.out
         if(printAST) {
             System.out.println("\nAbstract Syntax Tree :");
