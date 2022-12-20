@@ -55,13 +55,13 @@ public class TypeChecker {
         AstNode varExprNode = node.children().get(2);
         DataType varType = varTypeNode.dataType();
         DataType exprType = exprCheck(varExprNode);
-        //implicit typecast int->float or float->int
+        //implicit typecast int->float
         //check typecast
-        if(numCastPossible(varType, exprType)) {
+        if(varType==DataType.FLOAT && numCastPossible(varType, exprType)) {
             return;
         }
         if(varType != exprType) {
-            throw new TypeCheckException("Wrong type by 'var "+ varIdNode.getText() +" "+ varTypeNode.getText() +"' unable to assign "+ exprType +" value");
+            throw new TypeCheckException("Wrong type at 'var "+ varIdNode.getText() +" "+ varTypeNode.getText() +"' unable to assign "+ exprType +" value");
         }
     }
 
@@ -71,12 +71,10 @@ public class TypeChecker {
             throw new GoParseException("Unknown variable "+node.children().get(0).getText());
         }
         DataType exprType = exprCheck(node.children().get(1));
+        //implicit typecast int->float
         //check typecast
-        if(numCastPossible(varType, exprType)) {
-            if(varType==DataType.FLOAT || exprType == DataType.FLOAT) {
-                return DataType.FLOAT;
-            }
-            return DataType.INT;
+        if(varType==DataType.FLOAT && numCastPossible(varType, exprType)) {
+            return DataType.FLOAT;
         }
         if(varType != exprType) {
             throw new TypeCheckException("Unable to assign "+ exprType +" value to "+ varType +" variable.");
