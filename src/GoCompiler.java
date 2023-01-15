@@ -1,4 +1,3 @@
-import org.antlr.v4.codegen.model.CodeBlockForAlt;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
@@ -7,9 +6,7 @@ import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import org.apache.commons.cli.*;
 import org.apache.commons.cli.ParseException;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 
 public class GoCompiler {
     public static void main(String[] args) throws IOException {
@@ -107,7 +104,7 @@ public class GoCompiler {
         TypeChecker typeChecker = new TypeChecker(symbolTableCreator);
         AstNode typecheckedTree = new AstNode();
         try {
-            typecheckedTree = typeChecker.check(astCreator.AST);
+            typecheckedTree = typeChecker.checkAndSet(astCreator.AST);
         } catch (GoParseException | TypeCheckException  e) {
             System.err.println(e.getMessage());
             System.exit(1);
@@ -121,7 +118,11 @@ public class GoCompiler {
         //Codegen
         CodeGenerator codeGenerator = new CodeGenerator(typecheckedTree, symbolTableCreator);
         String jasminCode = codeGenerator.code();
-        System.out.println(jasminCode);
+        //write code to file
+        FileWriter writer = new FileWriter("./jasmin/MyGen.j");
+        writer.write(jasminCode);
+        writer.close();
+        //System.out.println(jasminCode);
 
         //optional AST to std.out
         if(printAST) {
