@@ -10,7 +10,8 @@ public class TypeChecker {
         this.creator = symbolTableCreator;
     }
 
-    public AstNode check(AstNode astRoot) throws TypeCheckException, GoParseException {
+    //checks for typing errors and returns type setted AST
+    public AstNode checkAndSet(AstNode astRoot) throws TypeCheckException, GoParseException {
         //check if first function is main
         if(!astRoot.children().get(0).children().get(0).getText().equals("main")) {
             throw new GoParseException("Function 'main' in package main not found.");
@@ -34,12 +35,14 @@ public class TypeChecker {
         }
     }
 
-    private void ifStatementCheck(AstNode node) throws TypeCheckException, GoParseException {
-        AstNode ifExpr = node.children().get(0);
+    private void ifStatementCheck(AstNode ifNode) throws TypeCheckException, GoParseException {
+        AstNode ifExpr = ifNode.children().get(0);
         DataType ifExprType = exprCheck(ifExpr);
         if(ifExprType != DataType.BOOL) {
             throw new TypeCheckException("If statement needs a boolean expression.");
         }
+        //TypeSetting
+        ifExpr.setDataType(DataType.BOOL);
     }
 
     private void forLoopCheck(AstNode node) throws TypeCheckException, GoParseException {
@@ -48,17 +51,20 @@ public class TypeChecker {
         if(forExprType != DataType.BOOL) {
             throw new TypeCheckException("For loop needs a boolean expression.");
         }
+        //TypeSetting
+        forExpr.setDataType(DataType.BOOL);
     }
 
-    private void varInitCheck(AstNode node) throws TypeCheckException, GoParseException {
+    private void varInitCheck(AstNode varInitNode) throws TypeCheckException, GoParseException {
         //TODO: check int x = float64 cast
-        AstNode varIdNode = node.children().get(0);
-        AstNode varTypeNode = node.children().get(1);
-        AstNode varExprNode = node.children().get(2);
+        AstNode varIdNode = varInitNode.children().get(0);
+        AstNode varTypeNode = varInitNode.children().get(1);
+        AstNode varExprNode = varInitNode.children().get(2);
         DataType varType = varTypeNode.dataType();
         DataType exprType = exprCheck(varExprNode);
+        //TypeSetting
+        varExprNode.setDataType(varType);
         //implicit typecast int->float
-        node.setDataType(varType);
         //check typecast
         if(varType==DataType.FLOAT && numCastPossible(varType, exprType)) {
             return;
@@ -68,12 +74,15 @@ public class TypeChecker {
         }
     }
 
-    private DataType varAssignCheck(AstNode node) throws TypeCheckException, GoParseException {
-        DataType varType = creator.funcScopeTable.get(currentFunc).get(node.children().get(0).getText());
+    private DataType varAssignCheck(AstNode varAssignNode) throws TypeCheckException, GoParseException {
+        DataType varType = creator.funcScopeTable.get(currentFunc).get(varAssignNode.children().get(0).getText());
         if(varType == null) {
-            throw new GoParseException("Unknown variable "+node.children().get(0).getText());
+            throw new GoParseException("Unknown variable "+varAssignNode.children().get(0).getText());
         }
-        DataType exprType = exprCheck(node.children().get(1));
+        AstNode varAssignExprNode = varAssignNode.children().get(1);
+        DataType exprType = exprCheck(varAssignExprNode);
+        //TypeSetting
+        varAssignExprNode.setDataType(varType);
         //implicit typecast int->float
         //check typecast
         if(varType==DataType.FLOAT && numCastPossible(varType, exprType)) {
@@ -85,21 +94,40 @@ public class TypeChecker {
         return varType;
     }
 
-    private void funcInvocCheck(AstNode node) throws GoParseException, TypeCheckException {
-        String funcId = node.children().get(0).getText();
-        //Println() joker
-        if(funcId.equals("Println")) return;
+    private void funcInvocCheck(AstNode funcInvocNode) throws GoParseException, TypeCheckException {
+        //TypeSetting
+        AstNode setNode = funcInvocNode.children().get(1);
+        while(setNode != null) {
+            setNode.setDataType(exprCheck(setNode.children().get(0)));
+            if(setNode.children().size() < 2) {
+                setNode = null;
+            } else {
+                setNode = setNode.children().get(1);
+            }
+        }
 
+        String funcId = funcInvocNode.children().get(0).getText();
         List<DataType> funcInvocParamList = new ArrayList<>();
         List<DataType> actualParamList = creator.symbolTableFuncParam.get(funcId);
         if(actualParamList == null) actualParamList = new ArrayList<>();
 
-        if(node.children().size() == 2) {
-            funcInvocParamList.addAll(getFuncInvocParam(node.children().get(1)));
+        //collect all parameters
+        if(funcInvocNode.children().size() == 2) {
+            funcInvocParamList.addAll(getFuncInvocParam(funcInvocNode.children().get(1)));
+        }
+        //check # of parameters
+        //Println()
+        if(funcId.equals("Println")) {
+            if(funcInvocParamList.size() != 1) {
+                throw new GoParseException("Wrong number of parameters at function call " + funcId + "()");
+            } else {
+                return;
+            }
         }
         if(actualParamList.size() != funcInvocParamList.size()) {
             throw new GoParseException("Wrong number of parameters at function call "+funcId+"()");
         }
+        //compare types of parameters
         for(int i = 0; i < actualParamList.size(); i++) {
             //both numbers
             if(numCastPossible(actualParamList.get(i), funcInvocParamList.get(i))) {
@@ -125,7 +153,7 @@ public class TypeChecker {
         return funcInvocParamList;
     }
 
-    private void funcReturnCheck(AstNode node) throws TypeCheckException, GoParseException {
+    private void funcReturnCheck(AstNode funcReturnNode) throws TypeCheckException, GoParseException {
         DataType retExprType = DataType.UNDEF;
         DataType funcRetType = DataType.UNDEF;
         //check if return type is empty
@@ -133,8 +161,8 @@ public class TypeChecker {
             funcRetType = creator.symbolTableFuncReturn.get(currentFunc);
         }
         //check if return is empty
-        if(!node.children().isEmpty()) {
-            retExprType = exprCheck(node.children().get(0));
+        if(!funcReturnNode.children().isEmpty()) {
+            retExprType = exprCheck(funcReturnNode.children().get(0));
         }
         //check int float cast
         if(numCastPossible(retExprType, funcRetType)) {
@@ -145,69 +173,82 @@ public class TypeChecker {
         }
     }
 
-    private DataType exprCheck(AstNode node) throws TypeCheckException, GoParseException {
+    private DataType exprCheck(AstNode exprNode) throws TypeCheckException, GoParseException {
         //>>>>>>reached expr_param node
         //func_invoc_dot -> get return type of func_invoc child
-        if(node.getText().equals("func_invoc_dot")) {
-            return exprCheck(node.children().get(1));
+        if(exprNode.getText().equals("func_invoc_dot")) {
+            return exprCheck(exprNode.children().get(1));
         }
         //func_invoc -> get return type of func
-        if(node.getText().equals("func_invoc")) {
-            String funcName = node.children().get(0).getText();
+        if(exprNode.getText().equals("func_invoc")) {
+            String funcName = exprNode.children().get(0).getText();
             if(creator.symbolTableFuncReturn.get(funcName) == null) {
                 return DataType.UNDEF;
             }
             return creator.symbolTableFuncReturn.get(funcName);
         }
         //id or literal
-        if(node.children().isEmpty()) {
+        if(exprNode.children().isEmpty()) {
             //id check
-            if(node.nodeType() == AstNodeType.ID) {
-                if(creator.funcScopeTable.get(currentFunc).get(node.getText()) == null) {
-                    throw new GoParseException("Unknown variable "+node.getText());
+            if(exprNode.nodeType() == AstNodeType.ID) {
+                if(creator.funcScopeTable.get(currentFunc).get(exprNode.getText()) == null) {
+                    throw new GoParseException("Unknown variable "+exprNode.getText());
                 } else {
-                    return creator.funcScopeTable.get(currentFunc).get(node.getText());
+                    return creator.funcScopeTable.get(currentFunc).get(exprNode.getText());
                 }
             } else {
-                return node.dataType();
+                return exprNode.dataType();
             }
         }
 
         //>>>>>>reached non-terminal node with one child (just one literal or id)
-        if(node.children().size() == 1) {
-            return exprCheck(node.children().get(0));
+        if(exprNode.children().size() == 1) {
+            DataType retDataType = exprCheck(exprNode.children().get(0));
+            //TypeSetting
+            exprNode.setDataType(retDataType);
+            return retDataType;
         }
 
         //>>>>>>unary operators
-        if(node.children().size() == 2) {
-            DataType op2Type = exprCheck(node.children().get(1));
-            if((node.children().get(0).nodeType() == AstNodeType.OP) &&
+        if(exprNode.children().size() == 2) {
+            DataType op2Type = exprCheck(exprNode.children().get(1));
+            if((exprNode.children().get(0).nodeType() == AstNodeType.OP) &&
                     (DataType.NUMBERS.contains(op2Type))) {
+                //TypeSetting
+                exprNode.setDataType(op2Type);
                 return op2Type;
-            } else if(node.children().get(0).nodeType() == AstNodeType.LGC_SMBL && op2Type == DataType.BOOL) {
+            } else if(exprNode.children().get(0).nodeType() == AstNodeType.LGC_SMBL && op2Type == DataType.BOOL) {
+                //TypeSetting
+                exprNode.setDataType(op2Type);
                 return op2Type;
             } else {
-                throw new TypeCheckException("Wrong use of unary operator '"+node.children().get(0).getText()+"'");
+                throw new TypeCheckException("Wrong use of unary operator '"+exprNode.children().get(0).getText()+"'");
             }
         }
 
         //>>>>>>still non-terminal node
-        AstNode op1 = node.children().get(0);
-        AstNode exprOp = node.children().get(1);
-        AstNode op2 = node.children().get(2);
+        AstNode op1 = exprNode.children().get(0);
+        AstNode exprOp = exprNode.children().get(1);
+        AstNode op2 = exprNode.children().get(2);
         DataType op1Type = exprCheck(op1), op2Type = exprCheck(op2);
         //arithmetic operations
         if(exprOp.nodeType() == AstNodeType.OP) {
             //STR concat
             if(exprOp.getText().equals("+") && (op1Type == DataType.STR && op2Type == DataType.STR)) {
+                //TypeSetting
+                exprNode.setDataType(DataType.STR);
                 return DataType.STR;
             }
             //numbers (typecast to float)
             if(numCastPossible(op1Type, op2Type)) {
                 if(op1Type == DataType.FLOAT || op2Type == DataType.FLOAT) {
+                    //TypeSetting
+                    exprNode.setDataType(DataType.FLOAT);
                     return DataType.FLOAT;
                 }
                 else {
+                    //TypeSetting
+                    exprNode.setDataType(DataType.INT);
                     return DataType.INT;
                 }
             }
@@ -218,6 +259,8 @@ public class TypeChecker {
         //arithmetic comparison: both operands need to be numbers
         if(AstNodeType.ARIT_CMP_SMBLS.contains(exprOp.getText())) {
             if(DataType.NUMBERS.contains(op1Type) && DataType.NUMBERS.contains(op2Type)) {
+                //TypeSetting
+                exprNode.setDataType(DataType.BOOL);
                 return DataType.BOOL;
             } else {
                 throw new TypeCheckException("Arithmetic comparison with values other than float64 or int not possible.");
@@ -226,6 +269,8 @@ public class TypeChecker {
         //logic comparison: both operands need to be boolean
         if(exprOp.nodeType() == AstNodeType.LGC_SMBL){
             if(op1Type == DataType.BOOL && op2Type == DataType.BOOL) {
+                //TypeSetting
+                exprNode.setDataType(DataType.BOOL);
                 return DataType.BOOL;
             } else {
                 throw new TypeCheckException("Boolean expression with non-boolean operators not possible.");
@@ -234,6 +279,8 @@ public class TypeChecker {
         //equation: both operands need to be of the same type, returns boolean
         if(AstNodeType.EQ_SMBLS.contains(exprOp.getText())) {
             if(op1Type == op2Type || (numCastPossible(op1Type, op2Type))) {
+                //TypeSetting
+                exprNode.setDataType(DataType.BOOL);
                 return DataType.BOOL;
             } else {
                 throw new TypeCheckException("Equation with two different types not possible.");
