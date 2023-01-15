@@ -10,12 +10,13 @@ public class TypeChecker {
         this.creator = symbolTableCreator;
     }
 
-    public void check(AstNode astRoot) throws TypeCheckException, GoParseException {
+    public AstNode check(AstNode astRoot) throws TypeCheckException, GoParseException {
         //check if first function is main
         if(!astRoot.children().get(0).children().get(0).getText().equals("main")) {
             throw new GoParseException("Function 'main' in package main not found.");
         }
         visit(astRoot);
+        return astRoot;
     }
 
     private void visit(AstNode node) throws TypeCheckException, GoParseException {
@@ -50,12 +51,14 @@ public class TypeChecker {
     }
 
     private void varInitCheck(AstNode node) throws TypeCheckException, GoParseException {
+        //TODO: check int x = float64 cast
         AstNode varIdNode = node.children().get(0);
         AstNode varTypeNode = node.children().get(1);
         AstNode varExprNode = node.children().get(2);
         DataType varType = varTypeNode.dataType();
         DataType exprType = exprCheck(varExprNode);
         //implicit typecast int->float
+        node.setDataType(varType);
         //check typecast
         if(varType==DataType.FLOAT && numCastPossible(varType, exprType)) {
             return;

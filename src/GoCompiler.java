@@ -1,3 +1,4 @@
+import org.antlr.v4.codegen.model.CodeBlockForAlt;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
@@ -104,8 +105,9 @@ public class GoCompiler {
 
         //typechecking
         TypeChecker typeChecker = new TypeChecker(symbolTableCreator);
+        AstNode typecheckedTree = new AstNode();
         try {
-            typeChecker.check(astCreator.AST);
+            typecheckedTree = typeChecker.check(astCreator.AST);
         } catch (GoParseException | TypeCheckException  e) {
             System.err.println(e.getMessage());
             System.exit(1);
@@ -115,6 +117,11 @@ public class GoCompiler {
         System.out.println("Typechecking success.");
 
         //TODO: Kontrollflussanalyse
+
+        //Codegen
+        CodeGenerator codeGenerator = new CodeGenerator(typecheckedTree, symbolTableCreator);
+        String jasminCode = codeGenerator.code();
+        System.out.println(jasminCode);
 
         //optional AST to std.out
         if(printAST) {
