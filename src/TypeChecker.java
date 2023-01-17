@@ -185,7 +185,10 @@ public class TypeChecker {
             if(creator.symbolTableFuncReturn.get(funcName) == null) {
                 return DataType.UNDEF;
             }
-            return creator.symbolTableFuncReturn.get(funcName);
+            DataType funcReturnDataType = creator.symbolTableFuncReturn.get(funcName);
+            //TypeSetting
+            exprNode.setDataType(funcReturnDataType);
+            return funcReturnDataType;
         }
         //id or literal
         if(exprNode.children().isEmpty()) {
@@ -194,9 +197,14 @@ public class TypeChecker {
                 if(creator.funcScopeTable.get(currentFunc).get(exprNode.getText()) == null) {
                     throw new GoParseException("Unknown variable "+exprNode.getText());
                 } else {
-                    return creator.funcScopeTable.get(currentFunc).get(exprNode.getText());
+                    DataType idDataType = creator.funcScopeTable.get(currentFunc).get(exprNode.getText());
+                    //TypeSetting
+                    exprNode.setDataType(idDataType);
+                    return idDataType;
                 }
             } else {
+                //TypeSetting
+                exprNode.setDataType(exprNode.dataType());
                 return exprNode.dataType();
             }
         }
