@@ -63,22 +63,104 @@ public class CodeGenerator {
     }
 
     private void varInitGen(AstNode varInitNode) {
+        DataType varInitType = varInitNode.dataType();
+        String typePrefix = "i";
+        if (varInitType == DataType.FLOAT) {
+            typePrefix = "f";
+        }
         varCounter++;
         String varId = varInitNode.children().get(0).getText();
         varToIdTable.put(varId, varCounter);
         AstNode varExprNode = varInitNode.children().get(2);
         exprGen(varExprNode);
-        codeBuilder.append("istore ")
+        codeBuilder.append(typePrefix).append("store ")
                 .append(varToIdTable.get(varId))
                 .append("\n");
     }
 
     private void exprGen(AstNode exprNode) {
         DataType exprType = exprNode.dataType();
-        //intExprGen(exprNode);
+        String typePrefix = "i";
+        if (exprType == DataType.FLOAT) {
+            typePrefix = "f";
+        }
+        //Terminal node (id or literal)
+        if(!exprNode.hasChild()) {
+            if (exprNode.nodeType() == AstNodeType.LIT) {
+                //true - 1 ; false - 0
+                if(exprType == DataType.BOOL) {
+                    switch (exprNode.getText()) {
+                        case "true" -> codeBuilder.append("ldc 1\n");
+                        case "false" -> codeBuilder.append("ldc 0\n");
+                    }
+                } else {
+                    codeBuilder.append("ldc ")
+                            .append(exprNode.getText())
+                            .append("\n");
+                }
+            } else if (exprNode.nodeType() == AstNodeType.ID) {
+                codeBuilder.append(typePrefix).append("load ")
+                        .append(varToIdTable.get(exprNode.getText()))
+                        .append("\n");
+            }
+        }
+        //one child -> skip
+        else if(exprNode.children().size() == 1) {
+            exprGen(exprNode.children().get(0));
+        }
+        //unary operator
+        else if(exprNode.children().size() == 2) {
+            //!true - 0 ; !false - 1
+            if(exprType == DataType.BOOL) {
+                switch (exprNode.getText()) {
+                    case "false" -> codeBuilder.append("ldc 1\n");
+                    case "true" -> codeBuilder.append("ldc 0\n");
+                }
+            }
+            codeBuilder.append("ldc ")
+                    .append(exprNode.children().get(0).getText())
+                    .append(exprNode.children().get(1).getText())
+                    .append("\n");
+        }
+        //operator
+        else if(exprNode.children().size() == 3) {
+            AstNode leftOp = exprNode.children().get(0);
+            AstNode rightOp = exprNode.children().get(2);
+            AstNode operator = exprNode.children().get(1);
+            //left operand
+            exprGen(leftOp);
+            //cast int to float for comparison
+            if(operator.nodeType() == AstNodeType.CMP_SMBL && leftOp.dataType() == DataType.INT) {
+                codeBuilder.append("i2f\n");
+            }
+            //right operand
+            exprGen(rightOp);
+            //cast int to float for comparison
+            if(operator.nodeType() == AstNodeType.CMP_SMBL && rightOp.dataType() == DataType.INT) {
+                codeBuilder.append("i2f\n");
+            }
+            switch (operator.getText()) {
+                case "||" -> codeBuilder.append("ior\n");
+                case "&&" -> codeBuilder.append("iand\n");
+                case "==" -> codeBuilder.append("");
+                case ">" -> codeBuilder.append("fcmpg\n");
+                case "<" -> codeBuilder.append("fcmpl\n");
+                case "*" -> codeBuilder.append(typePrefix).append("mul\n");
+                case "/" -> codeBuilder.append(typePrefix).append("div\n");
+                case "+" -> codeBuilder.append(typePrefix).append("add\n");
+                case "-" -> codeBuilder.append(typePrefix).append("sub\n");
+            }
+        }
+        /*
+        DataType exprType = exprNode.dataType();
         switch (exprType) {
             case INT -> intExprGen(exprNode);
-        }
+            case BOOL -> boolExprGen(exprNode);
+        }*/
+    }
+
+    private void boolExprGen(AstNode boolExprNode) {
+
     }
 
     private void intExprGen(AstNode intExprNode) {
@@ -137,7 +219,7 @@ public class CodeGenerator {
                 case INT -> codeBuilder.append("invokevirtual java/io/PrintStream/println(I)V\n");
                 case STR -> codeBuilder.append("invokevirtual java/io/PrintStream/println(Ljava/lang/String;)V\n");
                 case FLOAT -> codeBuilder.append("invokevirtual java/io/PrintStream/println(D)V\n");
-                case BOOL -> codeBuilder.append("invokevirtual java/io/PrintStream/println(B)V\n");
+                case BOOL -> codeBuilder.append("invokevirtual java/io/PrintStream/println(Z)V\n");
             }
 
         }
