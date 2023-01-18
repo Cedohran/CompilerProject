@@ -14,6 +14,8 @@ public class CodeGenerator {
     int ifElseLabelCounter = 0;
     //if nest counter
     int ifNestCounter = -1;
+    //counter for boolean values (eg. comparisons)
+    int boolCounter = 0;
 
     CodeGenerator(AstNode root, SymbolTableCreator symbolTableCreator) {
         this.ast = root;
@@ -181,75 +183,39 @@ public class CodeGenerator {
                 //TODO: equals
                 //fcmpl:
                 //-1 - left kleiner ; 0 - gleich ; 1 - rechts kleiner
-                case "==" -> codeBuilder.append("");
-                case ">" -> codeBuilder.append("fcmpg\n");
-                case "<" -> codeBuilder.append("fcmpl\n");
+                case "<", ">", "<=", ">=", "==", "!=" -> {
+                    codeBuilder.append("fcmpl\n");
+                    comparisonGen(operator.getText());
+                }
                 case "*" -> codeBuilder.append(typePrefix).append("mul\n");
                 case "/" -> codeBuilder.append(typePrefix).append("div\n");
                 case "+" -> codeBuilder.append(typePrefix).append("add\n");
                 case "-" -> codeBuilder.append(typePrefix).append("sub\n");
             }
-        }
-        /*
-        {
-                    boolCounter++;
-                    codeBuilder.append("iflt true").append(boolCounter).append("\n")
-                            .append("ldc 0\n")
-                            .append("goto skip_true").append(boolCounter).append("\n")
-                            .append("true").append(boolCounter).append(":\n")
-                            .append("ldc 1\n")
-                            .append("skip_true").append(boolCounter).append(":\n");
-        }
 
-        DataType exprType = exprNode.dataType();
-        switch (exprType) {
-            case INT -> intExprGen(exprNode);
-            case BOOL -> boolExprGen(exprNode);
-        }*/
+        }
     }
 
-    private void boolExprGen(AstNode boolExprNode) {
-
-    }
-
-    private void intExprGen(AstNode intExprNode) {
-        //Terminal node (id or literal)
-        if(!intExprNode.hasChild()) {
-            if (intExprNode.nodeType() == AstNodeType.LIT) {
-                codeBuilder.append("ldc ")
-                        .append(intExprNode.getText())
-                        .append("\n");
-            } else if (intExprNode.nodeType() == AstNodeType.ID) {
-                codeBuilder.append("iload ")
-                        .append(varToIdTable.get(intExprNode.getText()))
-                        .append("\n");
-            }
+    private void comparisonGen(String operator) {
+        boolCounter++;
+        switch(operator) {
+            case "<" -> codeBuilder.append("iflt true").append(boolCounter).append("\n");
+            case ">" -> codeBuilder.append("ifgt true").append(boolCounter).append("\n");
+            case "<=" -> codeBuilder.append("iflt true").append(boolCounter).append("\n")
+                    .append("ifeq true").append(boolCounter).append("\n");
+            case ">=" -> codeBuilder.append("ifgt true").append(boolCounter).append("\n")
+                    .append("ifeq true").append(boolCounter).append("\n");
+            case "==" -> codeBuilder.append("ifeq true").append(boolCounter).append("\n");
+            case "!=" -> codeBuilder.append("ifneq true").append(boolCounter).append("\n");
         }
-        //one child -> skip
-        else if(intExprNode.children().size() == 1) {
-            intExprGen(intExprNode.children().get(0));
-        }
-        //unary operator
-        else if(intExprNode.children().size() == 2) {
-            codeBuilder.append("ldc ")
-                    .append(intExprNode.children().get(0).getText())
-                    .append(intExprNode.children().get(1).getText())
-                    .append("\n");
-        }
-        //operator
-        else if(intExprNode.children().size() == 3) {
-            //left operand
-            intExprGen(intExprNode.children().get(0));
-            //right operand
-            intExprGen(intExprNode.children().get(2));
-            String operator = intExprNode.children().get(1).getText();
-            switch (operator) {
-                case "*" -> codeBuilder.append("imul\n");
-                case "/" -> codeBuilder.append("idiv\n");
-                case "+" -> codeBuilder.append("iadd\n");
-                case "-" -> codeBuilder.append("isub\n");
-            }
-        }
+        codeBuilder
+                //load false
+                .append("ldc 0\n")
+                .append("goto skip_true").append(boolCounter).append("\n")
+                .append("true").append(boolCounter).append(":\n")
+                //load true
+                .append("ldc 1\n")
+                .append("skip_true").append(boolCounter).append(":\n");
     }
 
     private void funcInvocGen(AstNode funcInvocNode) {
@@ -273,11 +239,4 @@ public class CodeGenerator {
 
         }
     }
-
-    private String getValueAsString(AstNode node) {
-        if(node.hasChild())
-            return getValueAsString(node.children().get(0));
-        return node.getText();
-    }
-
 }
