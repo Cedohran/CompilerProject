@@ -7,9 +7,13 @@ public class CodeGenerator {
     private String currentFunc = "";
     private StringBuilder codeBuilder;
     private AstNode ast;
-    //Map for variables to ID
+    //Map for variables to ID (starts at: 1)
     private Map<String, Integer> varToIdTable = new HashMap<>();
     private int varCounter = 0;
+    //if else label counters (starts at: 1)
+    int ifElseLabelCounter = 0;
+    //if nest counter
+    int ifNestCounter = -1;
 
     CodeGenerator(AstNode root, SymbolTableCreator symbolTableCreator) {
         this.ast = root;
@@ -48,6 +52,7 @@ public class CodeGenerator {
     }
 
     private void visit(AstNode node) {
+        //enter node
         for(AstNode child : node.children()) {
             switch (child.getText()) {
                 case "func" -> {
@@ -56,19 +61,50 @@ public class CodeGenerator {
                     varCounter = 0;
                 }
                 case "func_invoc" -> funcInvocGen(child);
+                case "if_statement" -> ifStatementGen(child);
+                case "else_statement" -> elseGen(child);
                 case "var_init" -> varInitGen(child);
             }
+            //prevNodeText = child.getText();
             visit(child);
+        }
+        //exit node
+        //after else_statement (for goto else_skip)
+        if(node.getText().equals("else_statement")) {
+            elseSkip();
         }
     }
 
+
+    private void ifStatementGen(AstNode ifNode) {
+        ifElseLabelCounter++;
+        ifNestCounter++;
+        AstNode ifExpr = ifNode.children().get(0);
+        exprGen(ifExpr);
+        //check if ifExpr is false --> jump to else
+        codeBuilder.append("ldc 0\n");
+        codeBuilder.append("if_icmpeq else").append(ifElseLabelCounter).append("\n");
+    }
+
+    private void elseGen(AstNode elseNode) {
+        //add else-skip for previous if
+        codeBuilder.append("goto else_skip").append(ifElseLabelCounter-ifNestCounter).append("\n");
+        //add else label for previous if goto
+        codeBuilder.append("else").append(ifElseLabelCounter-ifNestCounter).append(":\n");
+    }
+
+    private void elseSkip() {
+        //the else skip goto jump 3000
+        codeBuilder.append("else_skip").append(ifElseLabelCounter-ifNestCounter).append(":\n");
+    }
+
     private void varInitGen(AstNode varInitNode) {
+        varCounter++;
         DataType varInitType = varInitNode.dataType();
         String typePrefix = "i";
         if (varInitType == DataType.FLOAT) {
             typePrefix = "f";
         }
-        varCounter++;
         String varId = varInitNode.children().get(0).getText();
         varToIdTable.put(varId, varCounter);
         AstNode varExprNode = varInitNode.children().get(2);
