@@ -178,6 +178,9 @@ public class CodeGenerator {
             switch (operator.getText()) {
                 case "||" -> codeBuilder.append("ior\n");
                 case "&&" -> codeBuilder.append("iand\n");
+                //TODO: equals
+                //fcmpl:
+                //-1 - left kleiner ; 0 - gleich ; 1 - rechts kleiner
                 case "==" -> codeBuilder.append("");
                 case ">" -> codeBuilder.append("fcmpg\n");
                 case "<" -> codeBuilder.append("fcmpl\n");
@@ -188,6 +191,16 @@ public class CodeGenerator {
             }
         }
         /*
+        {
+                    boolCounter++;
+                    codeBuilder.append("iflt true").append(boolCounter).append("\n")
+                            .append("ldc 0\n")
+                            .append("goto skip_true").append(boolCounter).append("\n")
+                            .append("true").append(boolCounter).append(":\n")
+                            .append("ldc 1\n")
+                            .append("skip_true").append(boolCounter).append(":\n");
+        }
+
         DataType exprType = exprNode.dataType();
         switch (exprType) {
             case INT -> intExprGen(exprNode);
