@@ -9,10 +9,12 @@ public class SymbolTableCreator extends GoParserBaseListener {
     Map<String, DataType> symbolTableFuncReturn = new HashMap<>();
     //parameters(types as list) of function
     Map<String, List<DataType>> symbolTableFuncParam = new HashMap<>();
+    //parameters(types + names as map) of function
+    Map<String, Map<String, DataType>> symbolTableFuncParamNameType = new HashMap<>();
     //all initialised variables(name,type) and parameters(name,type) available in function scope
     Map<String, Map<String, DataType>> funcScopeTable = new HashMap<>();
     //current function for scope
-    String currentFunc = "";
+    private String currentFunc = "";
 
     //can't overwrite function signature -> save exception for later throw
     GoParseException exception = null;
@@ -34,6 +36,7 @@ public class SymbolTableCreator extends GoParserBaseListener {
             return;
         }
         symbolTableFuncParam.put(currentFunc, new ArrayList<>());
+        symbolTableFuncParamNameType.put(currentFunc, new HashMap<>());
         funcScopeTable.put(currentFunc, new HashMap<>());
     }
 
@@ -62,6 +65,7 @@ public class SymbolTableCreator extends GoParserBaseListener {
         }
         currentVarTable.put(varId, type);
         symbolTableFuncParam.get(currentFunc).add(type);
+        symbolTableFuncParamNameType.get(currentFunc).put(varId, type);
     }
 
     @Override
@@ -78,6 +82,7 @@ public class SymbolTableCreator extends GoParserBaseListener {
         }
         currentVarTable.put(varId, type);
         symbolTableFuncParam.get(currentFunc).add(type);
+        symbolTableFuncParamNameType.get(currentFunc).put(varId, type);
     }
 
     @Override
