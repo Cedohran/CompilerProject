@@ -14,6 +14,9 @@ public class CodeGenerator {
     int ifElseLabelCounter = 0;
     //if nest counter
     int ifNestCounter = -1;
+    //for loop
+    int forLoopLabelCounter = 0;
+    int forLoopNestCounter = -1;
     //counter for boolean values (eg. comparisons)
     int boolCounter = 0;
 
@@ -65,6 +68,7 @@ public class CodeGenerator {
                 case "func_invoc" -> funcInvocGen(child);
                 case "if_statement" -> ifStatementGen(child);
                 case "else_statement" -> elseGen(child);
+                case "for_loop" -> forLoopGen(child);
                 case "var_init" -> varInitGen(child);
             }
             //prevNodeText = child.getText();
@@ -74,16 +78,18 @@ public class CodeGenerator {
         //after else_statement (for goto else_skip)
         if(node.getText().equals("else_statement")) {
             elseSkip();
+        } //after for_loop for loop or skip
+        else if(node.getText().equals("for_loop")) {
+            forLoopEnd();
         }
     }
-
 
     private void ifStatementGen(AstNode ifNode) {
         ifElseLabelCounter++;
         ifNestCounter++;
         AstNode ifExpr = ifNode.children().get(0);
         exprGen(ifExpr);
-        //check if ifExpr is false --> jump to else
+        //check if ifExpr is false -> jump to else
         codeBuilder.append("ldc 0\n");
         codeBuilder.append("if_icmpeq else").append(ifElseLabelCounter).append("\n");
     }
@@ -98,6 +104,25 @@ public class CodeGenerator {
     private void elseSkip() {
         //the else skip goto jump 3000
         codeBuilder.append("else_skip").append(ifElseLabelCounter-ifNestCounter).append(":\n");
+        ifNestCounter--;
+    }
+
+    private void forLoopGen(AstNode forLoopNode) {
+        forLoopLabelCounter++;
+        forLoopNestCounter++;
+        codeBuilder.append("for_start").append(forLoopLabelCounter).append(":\n");
+        AstNode forExpr = forLoopNode.children().get(0);
+        exprGen(forExpr);
+        //check if forExpr is false -> skip loop body
+        codeBuilder.append("ldc 0\n");
+        codeBuilder.append("if_icmpeq for_end").append(forLoopLabelCounter).append("\n");
+    }
+
+    private void forLoopEnd() {
+        //the for loop skip goto jump 3000
+        codeBuilder.append("goto for_start").append(forLoopLabelCounter).append("\n");
+        codeBuilder.append("for_end").append(forLoopLabelCounter-forLoopNestCounter).append(":\n");
+        forLoopNestCounter--;
     }
 
     private void varInitGen(AstNode varInitNode) {
@@ -175,7 +200,7 @@ public class CodeGenerator {
             switch (operator.getText()) {
                 case "||" -> codeBuilder.append("ior\n");
                 case "&&" -> codeBuilder.append("iand\n");
-                //TODO: equals
+                //TODO: string concat
                 //fcmpl:
                 //-1 - left kleiner ; 0 - gleich ; 1 - rechts kleiner
                 case "<", ">", "<=", ">=", "==", "!=" -> {
@@ -213,9 +238,12 @@ public class CodeGenerator {
         switch(operator) {
             case "<" -> codeBuilder.append("iflt true").append(boolCounter).append("\n");
             case ">" -> codeBuilder.append("ifgt true").append(boolCounter).append("\n");
-            case "<=" -> codeBuilder.append("iflt true").append(boolCounter).append("\n")
+            //TODO: fix
+            case "<=" -> codeBuilder.append("dup_x1\n")
+                    .append("iflt true").append(boolCounter).append("\n")
                     .append("ifeq true").append(boolCounter).append("\n");
-            case ">=" -> codeBuilder.append("ifgt true").append(boolCounter).append("\n")
+            case ">=" -> codeBuilder.append("dup_x1\n")
+                    .append("ifgt true").append(boolCounter).append("\n")
                     .append("ifeq true").append(boolCounter).append("\n");
             case "==" -> codeBuilder.append("ifeq true").append(boolCounter).append("\n");
             case "!=" -> codeBuilder.append("ifneq true").append(boolCounter).append("\n");
