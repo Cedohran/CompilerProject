@@ -3,7 +3,7 @@ import java.util.Map;
 
 public class CodeGenerator {
     //symbol table
-    SymbolTableCreator creator;
+    SymbolTableCreator symbolTable;
     private String currentFunc = "";
     private StringBuilder codeBuilder;
     private AstNode ast;
@@ -22,7 +22,7 @@ public class CodeGenerator {
 
     CodeGenerator(AstNode root, SymbolTableCreator symbolTableCreator) {
         this.ast = root;
-        this.creator = symbolTableCreator;
+        this.symbolTable = symbolTableCreator;
         //static code
         codeBuilder = new StringBuilder(".class public MyGen\n" +
                 ".super java/lang/Object\n" +
@@ -35,15 +35,7 @@ public class CodeGenerator {
                 "   invokenonvirtual java/lang/Object/<init>()V\n" +
                 "   return\n" +
                 ".end method\n" +
-                "\n" +
-                ";\n" +
-                "; main()\n" +
-                ";\n" +
-                ".method public static main([Ljava/lang/String;)V\n" +
-                "    ; set limits used by this method\n" +
-                "    .limit locals 4\n" +
-                "    .limit stack 3\n" +
-                "    ;generated code\n");
+                "\n");
     }
 
     public String code() {
@@ -62,14 +54,14 @@ public class CodeGenerator {
             switch (child.getText()) {
                 case "func" -> {
                     currentFunc = child.children().get(0).getText();
-                    varToIdTable = new HashMap<>();
-                    varCounter = 0;
+                    funcGen(child);
                 }
                 case "func_invoc" -> funcInvocGen(child);
                 case "if_statement" -> ifStatementGen(child);
                 case "else_statement" -> elseGen(child);
                 case "for_loop" -> forLoopGen(child);
                 case "var_init" -> varInitGen(child);
+                case "var_assign" -> varAssignGen(child);
             }
             //prevNodeText = child.getText();
             visit(child);
@@ -82,6 +74,43 @@ public class CodeGenerator {
         else if(node.getText().equals("for_loop")) {
             forLoopEnd();
         }
+    }
+
+    private void funcGen(AstNode funcNode) {
+        String funcName = funcNode.children().get(0).getText();
+
+        if(funcName.equals("main")) {
+            codeBuilder.append(";\n" +
+                    "; main()\n" +
+                    ";\n" +
+                    ".method public static main([Ljava/lang/String;)V\n" +
+                    "    ; set limits used by this method\n" +
+                    "    .limit locals 4\n" +
+                    "    .limit stack 3\n" +
+                    "    ;generated code\n");
+        } else {
+            StringBuilder funcParams = new StringBuilder();
+            String returnType = symbolTable.symbolTableFuncReturn.get(currentFunc).toString();
+
+            codeBuilder.append(".method public ").append(returnType).append(" ").append(currentFunc)
+                    .append("()V\n")
+                    .append("    ; set limits used by this method\n")
+                    .append("    .limit locals 4\n")
+                    .append("    .limit stack 3\n")
+                    .append("    ;generated code\n");
+        }
+    }
+
+    private void varAssignGen(AstNode assignNode) {
+        DataType assignType = assignNode.dataType();
+        String typePrefix = setTypePrefix(assignType);
+
+        String varId = assignNode.children().get(0).getText();
+        AstNode varExprNode = assignNode.children().get(1);
+        exprGen(varExprNode);
+        codeBuilder.append(typePrefix).append("store ")
+                .append(varToIdTable.get(currentFunc+varId))
+                .append("\n");
     }
 
     private void ifStatementGen(AstNode ifNode) {
@@ -131,11 +160,11 @@ public class CodeGenerator {
         String typePrefix = setTypePrefix(varInitType);
 
         String varId = varInitNode.children().get(0).getText();
-        varToIdTable.put(varId, varCounter);
+        varToIdTable.put(currentFunc+varId, varCounter);
         AstNode varExprNode = varInitNode.children().get(2);
         exprGen(varExprNode);
         codeBuilder.append(typePrefix).append("store ")
-                .append(varToIdTable.get(varId))
+                .append(varToIdTable.get(currentFunc+varId))
                 .append("\n");
     }
 
@@ -158,7 +187,7 @@ public class CodeGenerator {
                 }
             } else if (exprNode.nodeType() == AstNodeType.ID) {
                 codeBuilder.append(typePrefix).append("load ")
-                        .append(varToIdTable.get(exprNode.getText()))
+                        .append(varToIdTable.get(currentFunc+exprNode.getText()))
                         .append("\n");
             }
         }
@@ -239,10 +268,10 @@ public class CodeGenerator {
             case "<" -> codeBuilder.append("iflt true").append(boolCounter).append("\n");
             case ">" -> codeBuilder.append("ifgt true").append(boolCounter).append("\n");
             //TODO: fix
-            case "<=" -> codeBuilder.append("dup_x1\n")
+            case "<=" -> codeBuilder.append("dup\n")
                     .append("iflt true").append(boolCounter).append("\n")
                     .append("ifeq true").append(boolCounter).append("\n");
-            case ">=" -> codeBuilder.append("dup_x1\n")
+            case ">=" -> codeBuilder.append("dup\n")
                     .append("ifgt true").append(boolCounter).append("\n")
                     .append("ifeq true").append(boolCounter).append("\n");
             case "==" -> codeBuilder.append("ifeq true").append(boolCounter).append("\n");
