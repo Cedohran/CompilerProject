@@ -63,6 +63,7 @@ public class TypeChecker {
         DataType varType = varTypeNode.dataType();
         DataType exprType = exprCheck(varExprNode);
         //TypeSetting
+        varInitNode.setDataType(varType);
         varExprNode.setDataType(varType);
         //implicit typecast int->float
         //check typecast
