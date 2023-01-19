@@ -103,10 +103,8 @@ public class CodeGenerator {
     private void varInitGen(AstNode varInitNode) {
         varCounter++;
         DataType varInitType = varInitNode.dataType();
-        String typePrefix = "i";
-        if (varInitType == DataType.FLOAT) {
-            typePrefix = "f";
-        }
+        String typePrefix = setTypePrefix(varInitType);
+
         String varId = varInitNode.children().get(0).getText();
         varToIdTable.put(varId, varCounter);
         AstNode varExprNode = varInitNode.children().get(2);
@@ -118,10 +116,7 @@ public class CodeGenerator {
 
     private void exprGen(AstNode exprNode) {
         DataType exprType = exprNode.dataType();
-        String typePrefix = "i";
-        if (exprType == DataType.FLOAT) {
-            typePrefix = "f";
-        }
+        String typePrefix = setTypePrefix(exprType);
         //Terminal node (id or literal)
         if(!exprNode.hasChild()) {
             if (exprNode.nodeType() == AstNodeType.LIT) {
@@ -184,8 +179,25 @@ public class CodeGenerator {
                 //fcmpl:
                 //-1 - left kleiner ; 0 - gleich ; 1 - rechts kleiner
                 case "<", ">", "<=", ">=", "==", "!=" -> {
-                    codeBuilder.append("fcmpl\n");
-                    comparisonGen(operator.getText());
+                    //string is special >:(
+                    if(leftOp.dataType() == DataType.STR) {
+                        boolCounter++;
+                        if(operator.getText().equals("==")) {
+                            codeBuilder.append("if_acmpeq true").append(boolCounter).append("\n");
+                        } else {
+                            codeBuilder.append("if_acmpne true").append(boolCounter).append("\n");
+                        }
+                        //load false
+                        codeBuilder.append("ldc 0\n")
+                                .append("goto skip_true").append(boolCounter).append("\n")
+                                .append("true").append(boolCounter).append(":\n")
+                                //load true
+                                .append("ldc 1\n")
+                                .append("skip_true").append(boolCounter).append(":\n");
+                    } else {
+                        codeBuilder.append("fcmpl\n");
+                        comparisonGen(operator.getText());
+                    }
                 }
                 case "*" -> codeBuilder.append(typePrefix).append("mul\n");
                 case "/" -> codeBuilder.append(typePrefix).append("div\n");
@@ -233,10 +245,25 @@ public class CodeGenerator {
             switch(invocParamExprNode.dataType()) {
                 case INT -> codeBuilder.append("invokevirtual java/io/PrintStream/println(I)V\n");
                 case STR -> codeBuilder.append("invokevirtual java/io/PrintStream/println(Ljava/lang/String;)V\n");
-                case FLOAT -> codeBuilder.append("invokevirtual java/io/PrintStream/println(D)V\n");
+                case FLOAT -> codeBuilder.append("invokevirtual java/io/PrintStream/println(F)V\n");
                 case BOOL -> codeBuilder.append("invokevirtual java/io/PrintStream/println(Z)V\n");
             }
 
         }
+    }
+
+    private String setTypePrefix(DataType type) {
+        switch(type) {
+            case INT, BOOL -> {
+                return "i";
+            }
+            case FLOAT -> {
+                return "f";
+            }
+            case STR -> {
+                return "a";
+            }
+        }
+        return "i";
     }
 }
