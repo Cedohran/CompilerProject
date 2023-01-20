@@ -97,13 +97,19 @@ public class TypeChecker {
 
     private void funcInvocCheck(AstNode funcInvocNode) throws GoParseException, TypeCheckException {
         //TypeSetting
-        AstNode setNode = funcInvocNode.children().get(1);
-        while(setNode != null) {
-            setNode.setDataType(exprCheck(setNode.children().get(0)));
-            if(setNode.children().size() < 2) {
-                setNode = null;
-            } else {
-                setNode = setNode.children().get(1);
+        //of call
+        if(creator.symbolTableFuncReturn.get(funcInvocNode.children().get(0).getText()) != null)
+            funcInvocNode.setDataType(creator.symbolTableFuncReturn.get(funcInvocNode.children().get(0).getText()));
+        // of params only if there are any
+        if(funcInvocNode.children().size() == 2) {
+            AstNode setNode = funcInvocNode.children().get(1);
+            while (setNode != null) {
+                setNode.setDataType(exprCheck(setNode.children().get(0)));
+                if (setNode.children().size() < 2) {
+                    setNode = null;
+                } else {
+                    setNode = setNode.children().get(1);
+                }
             }
         }
 
