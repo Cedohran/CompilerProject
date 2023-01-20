@@ -8,9 +8,9 @@ public class SymbolTableCreator extends GoParserBaseListener {
     //return type of function
     Map<String, DataType> symbolTableFuncReturn = new HashMap<>();
     //parameters(types as list) of function
-    Map<String, List<DataType>> symbolTableFuncParam = new HashMap<>();
-    //parameters(types + names as map) of function
-    Map<String, Map<String, DataType>> symbolTableFuncParamNameType = new HashMap<>();
+    Map<String, List<DataType>> symbolTableFuncParamType = new HashMap<>();
+    //parameters(names as list) of function
+    Map<String, List<String>> symbolTableFuncParamName = new HashMap<>();
     //all initialised variables(name,type) and parameters(name,type) available in function scope
     Map<String, Map<String, DataType>> funcScopeTable = new HashMap<>();
     //current function for scope
@@ -35,8 +35,8 @@ public class SymbolTableCreator extends GoParserBaseListener {
                 exception = new GoParseException("function "+currentFunc+" already declared.");
             return;
         }
-        symbolTableFuncParam.put(currentFunc, new ArrayList<>());
-        symbolTableFuncParamNameType.put(currentFunc, new HashMap<>());
+        symbolTableFuncParamType.put(currentFunc, new ArrayList<>());
+        symbolTableFuncParamName.put(currentFunc, new ArrayList<>());
         funcScopeTable.put(currentFunc, new HashMap<>());
     }
 
@@ -64,8 +64,8 @@ public class SymbolTableCreator extends GoParserBaseListener {
             return;
         }
         currentVarTable.put(varId, type);
-        symbolTableFuncParam.get(currentFunc).add(type);
-        symbolTableFuncParamNameType.get(currentFunc).put(varId, type);
+        symbolTableFuncParamType.get(currentFunc).add(type);
+        symbolTableFuncParamName.get(currentFunc).add(varId);
     }
 
     @Override
@@ -81,8 +81,8 @@ public class SymbolTableCreator extends GoParserBaseListener {
             return;
         }
         currentVarTable.put(varId, type);
-        symbolTableFuncParam.get(currentFunc).add(type);
-        symbolTableFuncParamNameType.get(currentFunc).put(varId, type);
+        symbolTableFuncParamType.get(currentFunc).add(type);
+        symbolTableFuncParamName.get(currentFunc).add(varId);
     }
 
     @Override

@@ -116,7 +116,7 @@ public class TypeChecker {
 
         String funcId = funcInvocNode.children().get(0).getText();
         List<DataType> funcInvocParamList = new ArrayList<>();
-        List<DataType> actualParamList = creator.symbolTableFuncParam.get(funcId);
+        List<DataType> actualParamList = creator.symbolTableFuncParamType.get(funcId);
         if(actualParamList == null) actualParamList = new ArrayList<>();
 
         //collect all parameters

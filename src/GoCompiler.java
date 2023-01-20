@@ -116,7 +116,7 @@ public class GoCompiler {
         //TODO: Kontrollflussanalyse
 
         //Codegen
-        CodeGenerator codeGenerator = new CodeGenerator(typecheckedTree, symbolTableCreator);
+        CodeGenerator codeGenerator = new CodeGenerator(typecheckedTree, symbolTableCreator, "MyGen");
         String jasminCode = codeGenerator.code();
         //write code to file
         FileWriter writer = new FileWriter("./jasmin/MyGen.j");
