@@ -1,7 +1,7 @@
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class CodeGenerator {
+    private final String className;
     //symbol table
     SymbolTableCreator symbolTable;
     private String currentFunc = "";
@@ -9,6 +9,7 @@ public class CodeGenerator {
     private AstNode ast;
     //Map for variables to ID (starts at: 1)
     private Map<String, Integer> varToIdTable = new HashMap<>();
+    //TODO: counter for each function?
     private int varCounter = 0;
     //if else label counters (starts at: 1)
     int ifElseLabelCounter = 0;
@@ -19,12 +20,15 @@ public class CodeGenerator {
     int forLoopNestCounter = -1;
     //counter for boolean values (eg. comparisons)
     int boolCounter = 0;
+    //help
+    String prevNodeText = "";
 
-    CodeGenerator(AstNode root, SymbolTableCreator symbolTableCreator) {
+    CodeGenerator(AstNode root, SymbolTableCreator symbolTableCreator, String className) {
         this.ast = root;
         this.symbolTable = symbolTableCreator;
+        this.className = className;
         //static code
-        codeBuilder = new StringBuilder(".class public MyGen\n" +
+        codeBuilder = new StringBuilder(".class public " + className + "\n" +
                 ".super java/lang/Object\n" +
                 "\n" +
                 ";\n" +
@@ -40,70 +44,187 @@ public class CodeGenerator {
 
     public String code() {
         visit(ast);
-        //static end code
-        codeBuilder.append("""
-                    ;done
-                    return
-                .end method""");
         return codeBuilder.toString();
     }
 
     private void visit(AstNode node) {
         //enter node
-        for(AstNode child : node.children()) {
-            switch (child.getText()) {
-                case "func" -> {
-                    currentFunc = child.children().get(0).getText();
-                    funcGen(child);
-                }
-                case "func_invoc" -> funcInvocGen(child);
-                case "if_statement" -> ifStatementGen(child);
-                case "else_statement" -> elseGen(child);
-                case "for_loop" -> forLoopGen(child);
-                case "var_init" -> varInitGen(child);
-                case "var_assign" -> varAssignGen(child);
+        //things to do
+        boolean skipChildren = false;
+        switch (node.getText()) {
+            case "func" -> {
+                currentFunc = node.children().get(0).getText();
+                varCounter = 0;
+                funcGen(node);
             }
-            //prevNodeText = child.getText();
-            visit(child);
+            case "func_invoc" -> {
+                funcInvocGen(node);
+                skipChildren = true;
+            }
+            case "func_return" -> {
+                funcReturnGen(node);
+                skipChildren = true;
+            }
+            case "if_statement" -> ifStatementGen(node);
+            case "else_statement" -> elseGen(node);
+            case "for_loop" -> forLoopGen(node);
+            case "var_init" -> {
+                varInitGen(node);
+                skipChildren = true;
+            }
+            case "var_assign" -> {
+                varAssignGen(node);
+                skipChildren = true;
+            }
+        }
+        if(!skipChildren) {
+            for (AstNode child : node.children()) {
+                visit(child);
+            }
         }
         //exit node
         //after else_statement (for goto else_skip)
-        if(node.getText().equals("else_statement")) {
-            elseSkip();
-        } //after for_loop for loop or skip
-        else if(node.getText().equals("for_loop")) {
-            forLoopEnd();
+        switch (node.getText()) {
+            case "func" -> exitFunc(node);
+            case "else_statement" -> elseSkip();
+            case "for_loop" -> forLoopEnd();
         }
+        prevNodeText = node.getText();
     }
 
-    private void funcGen(AstNode funcNode) {
-        String funcName = funcNode.children().get(0).getText();
 
-        if(funcName.equals("main")) {
+    private void funcGen(AstNode funcNode) {
+        String funcId = funcNode.children().get(0).getText();
+
+        if(funcId.equals("main")) {
+            //skip args param
+            varCounter = 1;
             codeBuilder.append(";\n" +
                     "; main()\n" +
                     ";\n" +
                     ".method public static main([Ljava/lang/String;)V\n" +
                     "    ; set limits used by this method\n" +
-                    "    .limit locals 4\n" +
-                    "    .limit stack 3\n" +
-                    "    ;generated code\n");
+                    "    .limit locals 255\n" +
+                    "    .limit stack 255\n");
         } else {
-            StringBuilder funcParams = new StringBuilder();
-            String returnType = symbolTable.symbolTableFuncReturn.get(currentFunc).toString();
-
-            codeBuilder.append(".method public ").append(returnType).append(" ").append(currentFunc)
-                    .append("()V\n")
+            String paramString = getFuncParams(funcId);
+            String returnType = getFuncReturnTypeAsString(funcId);
+            codeBuilder.append(".method public static ").append(funcId)
+                    .append("(").append(paramString).append(")")
+                    .append(returnType).append("\n")
                     .append("    ; set limits used by this method\n")
-                    .append("    .limit locals 4\n")
-                    .append("    .limit stack 3\n")
-                    .append("    ;generated code\n");
+                    .append("    .limit locals 255\n")
+                    .append("    .limit stack 255\n");
+            //init params as variables
+            List<String> paramNames = symbolTable.symbolTableFuncParamName.get(funcId);
+            for(String varId : paramNames) {
+                varToIdTable.put(funcId + varId, varCounter);
+                varCounter++;
+            }
         }
+    }
+
+    private void exitFunc(AstNode funcNode) {
+        codeBuilder.append(".end method\n\n\n");
+    }
+
+    private void funcReturnGen(AstNode funcReturnNode){
+        if(funcReturnNode.hasChild()) {
+            AstNode returnExpr = funcReturnNode.children().get(0);
+            exprGen(returnExpr);
+        }
+        if(symbolTable.symbolTableFuncReturn.get(currentFunc) != null) {
+            DataType retType = symbolTable.symbolTableFuncReturn.get(currentFunc);
+            String retTypePrefix = getTypePrefix(retType);
+            //return
+            codeBuilder.append(retTypePrefix).append("return\n");
+        }
+    }
+
+    private void funcInvocGen(AstNode funcInvocNode) {
+        String funcId = funcInvocNode.children().get(0).getText();
+        AstNode invocParamNode = new AstNode();
+        String invocParams = getFuncParams(funcId);
+        //check params and generate param code
+        if(funcInvocNode.children().size() == 2) {
+            invocParamNode = funcInvocNode.children().get(1);
+            exprGen(invocParamNode.children().get(0));
+            while(invocParamNode.children().size() == 2) {
+                invocParamNode = invocParamNode.children().get(1);
+                exprGen(invocParamNode.children().get(0));
+            }
+            //reset node
+            invocParamNode = funcInvocNode.children().get(1);
+        }
+        //generate code for Println(), only one parameter
+        if(funcId.equals("Println")) {
+            //push System.out
+            codeBuilder.append("getstatic java/lang/System/out Ljava/io/PrintStream;\n");
+            //swap std out and previously generated param
+            codeBuilder.append("swap\n");
+            //invoke println()
+            DataType exprType = invocParamNode.children().get(0).dataType();
+            switch(exprType) {
+                case INT -> codeBuilder.append("invokevirtual java/io/PrintStream/println(I)V\n");
+                case STR -> codeBuilder.append("invokevirtual java/io/PrintStream/println(Ljava/lang/String;)V\n");
+                case FLOAT -> codeBuilder.append("invokevirtual java/io/PrintStream/println(F)V\n");
+                case BOOL -> codeBuilder.append("invokevirtual java/io/PrintStream/println(Z)V\n");
+            }
+        } else {
+            codeBuilder.append("invokestatic ").append(className).append("/").append(funcId)
+                    .append("(").append(invocParams).append(")")
+                    .append(getFuncReturnTypeAsString(funcId)).append("\n");
+        }
+
+
+    }
+
+    private String getFuncParams(String funcId) {
+        StringBuilder paramString = new StringBuilder();
+        List<DataType> funcParams = new ArrayList<>();
+        if(symbolTable.symbolTableFuncParamType.get(funcId) != null) {
+            funcParams = symbolTable.symbolTableFuncParamType.get(funcId);
+        }
+        if(!funcParams.isEmpty()) {
+            int i = 0;
+            for(DataType param : funcParams) {
+                switch(param) {
+                    //[ : array
+                    case INT -> paramString.append("I");
+                    case FLOAT -> paramString.append("F");
+                    case STR -> paramString.append("Ljava/lang/String;");
+                    case BOOL -> paramString.append("Z");
+                }
+            }
+        }
+        return paramString.toString();
+    }
+
+    public String getFuncReturnTypeAsString(String funcId) {
+        DataType retType = symbolTable.symbolTableFuncReturn.get(funcId);
+        switch (retType){
+            case INT -> {
+                return "I";
+            }
+            case FLOAT -> {
+                return "F";
+            }
+            case STR -> {
+                return "Ljava/lang/String;";
+            }
+            case BOOL -> {
+                return "Z";
+            }
+            case UNDEF -> {
+                return "V";
+            }
+        }
+        return "V";
     }
 
     private void varAssignGen(AstNode assignNode) {
         DataType assignType = assignNode.dataType();
-        String typePrefix = setTypePrefix(assignType);
+        String typePrefix = getTypePrefix(assignType);
 
         String varId = assignNode.children().get(0).getText();
         AstNode varExprNode = assignNode.children().get(1);
@@ -118,9 +239,12 @@ public class CodeGenerator {
         ifNestCounter++;
         AstNode ifExpr = ifNode.children().get(0);
         exprGen(ifExpr);
-        //check if ifExpr is false -> jump to else
-        codeBuilder.append("ldc 0\n");
-        codeBuilder.append("if_icmpeq else").append(ifElseLabelCounter).append("\n");
+        //is there an else?
+        if(ifNode.children().size() == 3) {
+            //check if ifExpr is false -> jump to else
+            codeBuilder.append("ldc 0\n");
+            codeBuilder.append("if_icmpeq else").append(ifElseLabelCounter).append("\n");
+        }
     }
 
     private void elseGen(AstNode elseNode) {
@@ -155,9 +279,8 @@ public class CodeGenerator {
     }
 
     private void varInitGen(AstNode varInitNode) {
-        varCounter++;
         DataType varInitType = varInitNode.dataType();
-        String typePrefix = setTypePrefix(varInitType);
+        String typePrefix = getTypePrefix(varInitType);
 
         String varId = varInitNode.children().get(0).getText();
         varToIdTable.put(currentFunc+varId, varCounter);
@@ -166,11 +289,17 @@ public class CodeGenerator {
         codeBuilder.append(typePrefix).append("store ")
                 .append(varToIdTable.get(currentFunc+varId))
                 .append("\n");
+        varCounter++;
     }
 
     private void exprGen(AstNode exprNode) {
         DataType exprType = exprNode.dataType();
-        String typePrefix = setTypePrefix(exprType);
+        String typePrefix = getTypePrefix(exprType);
+        //func_invoc
+        if(exprNode.getText().equals("func_invoc")) {
+            funcInvocGen(exprNode);
+            return;
+        }
         //Terminal node (id or literal)
         if(!exprNode.hasChild()) {
             if (exprNode.nodeType() == AstNodeType.LIT) {
@@ -287,29 +416,7 @@ public class CodeGenerator {
                 .append("skip_true").append(boolCounter).append(":\n");
     }
 
-    private void funcInvocGen(AstNode funcInvocNode) {
-        String funcId = funcInvocNode.children().get(0).getText();
-        AstNode invocParamNode = funcInvocNode.children().get(1);
-
-        //generate code for Println(), only one parameter
-        if(funcId.equals("Println")) {
-            //push System.out
-            codeBuilder.append("getstatic java/lang/System/out Ljava/io/PrintStream;\n");
-            //generate code for invocation parameter, that should be printed
-            AstNode invocParamExprNode = invocParamNode.children().get(0);
-            exprGen(invocParamExprNode);
-            //invoke println()
-            switch(invocParamExprNode.dataType()) {
-                case INT -> codeBuilder.append("invokevirtual java/io/PrintStream/println(I)V\n");
-                case STR -> codeBuilder.append("invokevirtual java/io/PrintStream/println(Ljava/lang/String;)V\n");
-                case FLOAT -> codeBuilder.append("invokevirtual java/io/PrintStream/println(F)V\n");
-                case BOOL -> codeBuilder.append("invokevirtual java/io/PrintStream/println(Z)V\n");
-            }
-
-        }
-    }
-
-    private String setTypePrefix(DataType type) {
+    private String getTypePrefix(DataType type) {
         switch(type) {
             case INT, BOOL -> {
                 return "i";
@@ -321,6 +428,6 @@ public class CodeGenerator {
                 return "a";
             }
         }
-        return "i";
+        return "";
     }
 }
