@@ -66,7 +66,7 @@ public class CodeGenerator {
                 skipChildren = true;
             }
             case "if_statement" -> ifStatementGen(node);
-            case "else_statement" -> elseGen(node);
+            case "else_statement" -> elseGen();
             case "for_loop" -> forLoopGen(node);
             case "var_init" -> {
                 varInitGen(node);
@@ -83,10 +83,10 @@ public class CodeGenerator {
             }
         }
         //exit node
-        //after else_statement (for goto else_skip)
         switch (node.getText()) {
             case "func" -> exitFunc(node);
-            case "else_statement" -> elseSkip();
+            //end of if_statement (for goto else_skip)
+            case "if_statement" -> elseSkip();
             case "for_loop" -> forLoopEnd();
         }
         prevNodeText = node.getText();
@@ -125,6 +125,10 @@ public class CodeGenerator {
     }
 
     private void exitFunc(AstNode funcNode) {
+        if(symbolTable.symbolTableFuncReturn.get(currentFunc) == DataType.UNDEF) {
+            //void
+            codeBuilder.append("return\n");
+        }
         codeBuilder.append(".end method\n\n\n");
     }
 
@@ -245,20 +249,25 @@ public class CodeGenerator {
             //check if ifExpr is false -> jump to else
             codeBuilder.append("ldc 0\n");
             codeBuilder.append("if_icmpeq else").append(ifElseLabelCounter).append("\n");
+        } //no else
+        else {
+            //check if ifExpr is false -> jump to else_skip
+            codeBuilder.append("ldc 0\n");
+            codeBuilder.append("if_icmpeq else_skip").append(ifElseLabelCounter).append("\n");
         }
     }
 
-    private void elseGen(AstNode elseNode) {
+    private void elseGen() {
         //add else-skip for previous if
-        codeBuilder.append("goto else_skip").append(ifElseLabelCounter-ifNestCounter).append("\n");
+        codeBuilder.append("goto else_skip").append(ifElseLabelCounter).append("\n");
         //add else label for previous if goto
-        codeBuilder.append("else").append(ifElseLabelCounter-ifNestCounter).append(":\n");
+        codeBuilder.append("else").append(ifElseLabelCounter).append(":\n");
     }
 
     private void elseSkip() {
         //the else skip goto jump 3000
-        codeBuilder.append("else_skip").append(ifElseLabelCounter-ifNestCounter).append(":\n");
-        ifNestCounter--;
+        codeBuilder.append("else_skip").append(ifElseLabelCounter).append(":\n");
+        ifElseLabelCounter--;
     }
 
     private void forLoopGen(AstNode forLoopNode) {
