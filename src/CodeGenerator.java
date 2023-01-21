@@ -125,10 +125,8 @@ public class CodeGenerator {
     }
 
     private void exitFunc(AstNode funcNode) {
-        if(symbolTable.symbolTableFuncReturn.get(currentFunc) == DataType.UNDEF) {
-            //void
-            codeBuilder.append("return\n");
-        }
+        //pls java, there is a return, now shut up
+        codeBuilder.append("return\n");
         codeBuilder.append(".end method\n\n\n");
     }
 
@@ -376,24 +374,9 @@ public class CodeGenerator {
             switch (operator.getText()) {
                 case "||" -> codeBuilder.append("ior\n");
                 case "&&" -> codeBuilder.append("iand\n");
-                case "<=", ">=" -> {
-                    codeBuilder.append("fcmpl\n");
-                    if(operator.getText().equals("<="))
-                        codeBuilder.append("ifgt skip_true").append(boolCounter).append("\n");
-                    else
-                        codeBuilder.append("iflt skip_true").append(boolCounter).append("\n");
-                    //load true
-                    codeBuilder.append("ldc 1\n");
-                    codeBuilder.append("goto skip_false").append(boolCounter).append("\n");
-                    //load false
-                    codeBuilder.append("skip_true").append(boolCounter).append(":\n")
-                            .append("ldc 0\n")
-                            .append("skip_false").append(boolCounter).append(":\n");
-
-                }
                 //fcmpl:
                 //-1 - left kleiner ; 0 - gleich ; 1 - rechts kleiner
-                case "<", ">", "==", "!=" -> {
+                case "<", ">", "==", "!=", "<=", ">=" -> {
                     //string is special >:(
                     if(leftOp.dataType() == DataType.STR) {
                         boolCounter++;
@@ -447,6 +430,20 @@ public class CodeGenerator {
     private void comparisonGen(String operator) {
         boolCounter++;
         switch(operator) {
+            case "<=", ">=" -> {
+                if(operator.equals("<="))
+                    codeBuilder.append("ifgt skip_true").append(boolCounter).append("\n");
+                else
+                    codeBuilder.append("iflt skip_true").append(boolCounter).append("\n");
+                //load true
+                codeBuilder.append("ldc 1\n");
+                codeBuilder.append("goto skip_false").append(boolCounter).append("\n");
+                //load false
+                codeBuilder.append("skip_true").append(boolCounter).append(":\n")
+                        .append("ldc 0\n")
+                        .append("skip_false").append(boolCounter).append(":\n");
+                return;
+            }
             case "<" -> codeBuilder.append("iflt true").append(boolCounter).append("\n");
             case ">" -> codeBuilder.append("ifgt true").append(boolCounter).append("\n");
             case "==" -> codeBuilder.append("ifeq true").append(boolCounter).append("\n");
