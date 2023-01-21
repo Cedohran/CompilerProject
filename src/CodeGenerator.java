@@ -22,8 +22,8 @@ public class CodeGenerator {
     int boolCounter = 0;
 
     //string format stuff
-    String preTab = "    ";
-    int tabIt = 1;
+    String preTab = "";
+    int tabIt = 0;
 
 
     CodeGenerator(AstNode root, SymbolTableCreator symbolTableCreator, String className) {
@@ -109,7 +109,7 @@ public class CodeGenerator {
                         ; set limits used by this method
                         .limit locals 255
                         .limit stack 255
-                    """);
+                    """).append("    ");
         } else {
             String paramString = getFuncParams(funcId);
             String returnType = getFuncReturnTypeAsString(funcId);
@@ -118,7 +118,7 @@ public class CodeGenerator {
                     .append(returnType).append("\n")
                     .append("    ; set limits used by this method\n")
                     .append("    .limit locals 255\n")
-                    .append("    .limit stack 255\n");
+                    .append("    .limit stack 255\n").append("    ");
             //init params as variables
             List<String> paramNames = symbolTable.symbolTableFuncParamName.get(funcId);
             for(String varId : paramNames) {
@@ -126,12 +126,14 @@ public class CodeGenerator {
                 varCounter++;
             }
         }
+        tabInc();
     }
 
     private void exitFunc(AstNode funcNode) {
         //pls java, there is a return, now shut up
         codeBuilder.append("return\n");
         codeBuilder.append(".end method\n\n\n");
+        tabDec();
     }
 
     private void funcReturnGen(AstNode funcReturnNode){
@@ -144,11 +146,11 @@ public class CodeGenerator {
             DataType retType = symbolTable.symbolTableFuncReturn.get(currentFunc);
             //cast
             if(retType == DataType.FLOAT && returnExpr.dataType() == DataType.INT){
-                codeBuilder.append("i2f\n");
+                codeBuilder.append("i2f\n").append(preTab);
             }
             String retTypePrefix = getTypePrefix(retType);
             //return
-            codeBuilder.append(retTypePrefix).append("return\n");
+            codeBuilder.append(retTypePrefix).append("return\n").append(preTab);
         }
     }
 
@@ -165,7 +167,7 @@ public class CodeGenerator {
             if(funcParamTypes != null) {
                 //cast
                 if(funcParamTypes.get(i) == DataType.FLOAT && invocParamNode.children().get(0).dataType() == DataType.INT){
-                    codeBuilder.append("i2f\n");
+                    codeBuilder.append("i2f\n").append(preTab);
                 }
                 i++;
             }
@@ -176,7 +178,7 @@ public class CodeGenerator {
                 if(funcParamTypes != null) {
                     //cast
                     if(funcParamTypes.get(i) == DataType.FLOAT && invocParamNode.children().get(0).dataType() == DataType.INT){
-                        codeBuilder.append("i2f\n");
+                        codeBuilder.append("i2f\n").append(preTab);
                     }
                     i++;
                 }
@@ -187,21 +189,21 @@ public class CodeGenerator {
         //generate code for Println(), only one parameter
         if(funcId.equals("Println")) {
             //push System.out
-            codeBuilder.append("getstatic java/lang/System/out Ljava/io/PrintStream;\n");
+            codeBuilder.append("getstatic java/lang/System/out Ljava/io/PrintStream;\n").append(preTab);
             //swap std out and previously generated param
-            codeBuilder.append("swap\n");
+            codeBuilder.append("swap\n").append(preTab);
             //invoke println()
             DataType exprType = invocParamNode.children().get(0).dataType();
             switch(exprType) {
-                case INT -> codeBuilder.append("invokevirtual java/io/PrintStream/println(I)V\n");
-                case STR -> codeBuilder.append("invokevirtual java/io/PrintStream/println(Ljava/lang/String;)V\n");
-                case FLOAT -> codeBuilder.append("invokevirtual java/io/PrintStream/println(F)V\n");
-                case BOOL -> codeBuilder.append("invokevirtual java/io/PrintStream/println(Z)V\n");
+                case INT -> codeBuilder.append("invokevirtual java/io/PrintStream/println(I)V\n").append(preTab);
+                case STR -> codeBuilder.append("invokevirtual java/io/PrintStream/println(Ljava/lang/String;)V\n").append(preTab);
+                case FLOAT -> codeBuilder.append("invokevirtual java/io/PrintStream/println(F)V\n").append(preTab);
+                case BOOL -> codeBuilder.append("invokevirtual java/io/PrintStream/println(Z)V\n").append(preTab);
             }
         } else {
             codeBuilder.append("invokestatic ").append(className).append("/").append(funcId)
                     .append("(").append(invocParams).append(")")
-                    .append(getFuncReturnTypeAsString(funcId)).append("\n");
+                    .append(getFuncReturnTypeAsString(funcId)).append("\n").append(preTab);
         }
         //invoc done -> delete for later
         funcInvocNode.setText("done_invoc");
@@ -251,7 +253,6 @@ public class CodeGenerator {
     }
 
     private void ifStatementGen(AstNode ifNode) {
-        //TODO: bug where func_invoc does not work in ifExpr
         ifElseLabelCounter++;
         ifNestCounter++;
         AstNode ifExpr = ifNode.children().get(0);
@@ -259,45 +260,57 @@ public class CodeGenerator {
         //is there an else?
         if(ifNode.children().size() == 3) {
             //check if ifExpr is false -> jump to else
-            codeBuilder.append("ldc 0\n");
+            codeBuilder.append("ldc 0\n").append(preTab);
             codeBuilder.append("if_icmpeq else").append(ifElseLabelCounter).append("\n");
         } //no else
         else {
             //check if ifExpr is false -> jump to else_skip
-            codeBuilder.append("ldc 0\n");
+            codeBuilder.append("ldc 0\n").append(preTab);
             codeBuilder.append("if_icmpeq else_skip").append(ifElseLabelCounter).append("\n");
         }
+        tabInc();
+        codeBuilder.append(preTab);
     }
 
     private void elseGen() {
         //add else-skip for previous if
         codeBuilder.append("goto else_skip").append(ifElseLabelCounter).append("\n");
+        tabDec();
+        codeBuilder.append(preTab);
         //add else label for previous if goto
         codeBuilder.append("else").append(ifElseLabelCounter).append(":\n");
+        tabInc();
+        codeBuilder.append(preTab);
     }
 
     private void elseSkip() {
         //the else skip goto jump 3000
         codeBuilder.append("else_skip").append(ifElseLabelCounter).append(":\n");
         ifElseLabelCounter--;
+        tabDec();
+        codeBuilder.append(preTab);
     }
 
     private void forLoopGen(AstNode forLoopNode) {
         forLoopLabelCounter++;
         forLoopNestCounter++;
-        codeBuilder.append("for_start").append(forLoopLabelCounter).append(":\n");
+        codeBuilder.append("for_start").append(forLoopLabelCounter).append(":\n").append(preTab);
         AstNode forExpr = forLoopNode.children().get(0);
         exprGen(forExpr);
         //check if forExpr is false -> skip loop body
-        codeBuilder.append("ldc 0\n");
+        codeBuilder.append("ldc 0\n").append(preTab);
         codeBuilder.append("if_icmpeq for_end").append(forLoopLabelCounter).append("\n");
+        tabInc();
+        codeBuilder.append(preTab);
     }
 
     private void forLoopEnd() {
         //the for loop skip goto jump 3000
-        codeBuilder.append("goto for_start").append(forLoopLabelCounter).append("\n");
+        codeBuilder.append("goto for_start").append(forLoopLabelCounter).append("\n").append(preTab);
         codeBuilder.append("for_end").append(forLoopLabelCounter-forLoopNestCounter).append(":\n");
         forLoopNestCounter--;
+        tabDec();
+        codeBuilder.append(preTab);
     }
 
     private void varInitGen(AstNode varInitNode) {
@@ -310,11 +323,11 @@ public class CodeGenerator {
         exprGen(varExprNode);
         //cast
         if(varInitType == DataType.FLOAT && varExprNode.dataType() == DataType.INT){
-            codeBuilder.append("i2f\n");
+            codeBuilder.append("i2f\n").append(preTab);
         }
         codeBuilder.append(typePrefix).append("store ")
                 .append(varToIdTable.get(currentFunc+varId))
-                .append("\n");
+                .append("\n").append(preTab);
         varCounter++;
     }
 
@@ -327,11 +340,11 @@ public class CodeGenerator {
         exprGen(varExprNode);
         //cast
         if(assignType == DataType.FLOAT && varExprNode.dataType() == DataType.INT){
-            codeBuilder.append("i2f\n");
+            codeBuilder.append("i2f\n").append(preTab);
         }
         codeBuilder.append(typePrefix).append("store ")
                 .append(varToIdTable.get(currentFunc+varId))
-                .append("\n");
+                .append("\n").append(preTab);
     }
 
     private void exprGen(AstNode exprNode) {
@@ -349,18 +362,18 @@ public class CodeGenerator {
                 //true - 1 ; false - 0
                 if(exprType == DataType.BOOL) {
                     switch (exprNode.getText()) {
-                        case "true" -> codeBuilder.append("ldc 1\n");
-                        case "false" -> codeBuilder.append("ldc 0\n");
+                        case "true" -> codeBuilder.append("ldc 1\n").append(preTab);
+                        case "false" -> codeBuilder.append("ldc 0\n").append(preTab);
                     }
                 } else {
                     codeBuilder.append("ldc ")
                             .append(exprNode.getText())
-                            .append("\n");
+                            .append("\n").append(preTab);
                 }
             } else if (exprNode.nodeType() == AstNodeType.ID) {
                 codeBuilder.append(typePrefix).append("load ")
                         .append(varToIdTable.get(currentFunc+exprNode.getText()))
-                        .append("\n");
+                        .append("\n").append(preTab);
             }
         }
         //one child -> skip
@@ -372,14 +385,14 @@ public class CodeGenerator {
             //!true - 0 ; !false - 1
             if(exprType == DataType.BOOL) {
                 switch (exprNode.getText()) {
-                    case "false" -> codeBuilder.append("ldc 1\n");
-                    case "true" -> codeBuilder.append("ldc 0\n");
+                    case "false" -> codeBuilder.append("ldc 1\n").append(preTab);
+                    case "true" -> codeBuilder.append("ldc 0\n").append(preTab);
                 }
             }
             codeBuilder.append("ldc ")
                     .append(exprNode.children().get(0).getText())
                     .append(exprNode.children().get(1).getText())
-                    .append("\n");
+                    .append("\n").append(preTab);
         }
         //operator
         else if(exprNode.children().size() == 3) {
@@ -390,25 +403,25 @@ public class CodeGenerator {
             exprGen(leftOp);
             //cast int to float for implicit typecast
             if(exprType == DataType.FLOAT && leftOp.dataType() == DataType.INT) {
-                codeBuilder.append("i2f\n");
+                codeBuilder.append("i2f\n").append(preTab);
             }
             //cast int to float for comparison
             else if(operator.nodeType() == AstNodeType.CMP_SMBL && leftOp.dataType() == DataType.INT) {
-                codeBuilder.append("i2f\n");
+                codeBuilder.append("i2f\n").append(preTab);
             }
             //right operand
             exprGen(rightOp);
             //cast int to float for implicit typecast
             if(exprType == DataType.FLOAT && rightOp.dataType() == DataType.INT) {
-                codeBuilder.append("i2f\n");
+                codeBuilder.append("i2f\n").append(preTab);
             }
             //cast int to float for comparison
             else if((operator.nodeType() == AstNodeType.CMP_SMBL) && rightOp.dataType() == DataType.INT) {
-                codeBuilder.append("i2f\n");
+                codeBuilder.append("i2f\n").append(preTab);
             }
             switch (operator.getText()) {
-                case "||" -> codeBuilder.append("ior\n");
-                case "&&" -> codeBuilder.append("iand\n");
+                case "||" -> codeBuilder.append("ior\n").append(preTab);
+                case "&&" -> codeBuilder.append("iand\n").append(preTab);
                 //fcmpl:
                 //-1 - left kleiner ; 0 - gleich ; 1 - rechts kleiner
                 case "<", ">", "==", "!=", "<=", ">=" -> {
@@ -416,49 +429,49 @@ public class CodeGenerator {
                     if(leftOp.dataType() == DataType.STR) {
                         boolCounter++;
                         if(operator.getText().equals("==")) {
-                            codeBuilder.append("if_acmpeq true").append(boolCounter).append("\n");
+                            codeBuilder.append("if_acmpeq true").append(boolCounter).append("\n").append(preTab);
                         } else {
-                            codeBuilder.append("if_acmpne true").append(boolCounter).append("\n");
+                            codeBuilder.append("if_acmpne true").append(boolCounter).append("\n").append(preTab);
                         }
                         //load false
-                        codeBuilder.append("ldc 0\n")
-                                .append("goto skip_true").append(boolCounter).append("\n")
-                                .append("true").append(boolCounter).append(":\n")
+                        codeBuilder.append("ldc 0\n").append(preTab)
+                                .append("goto skip_true").append(boolCounter).append("\n").append(preTab)
+                                .append("true").append(boolCounter).append(":\n").append(preTab)
                                 //load true
-                                .append("ldc 1\n")
-                                .append("skip_true").append(boolCounter).append(":\n");
+                                .append("ldc 1\n").append(preTab)
+                                .append("skip_true").append(boolCounter).append(":\n").append(preTab);
                     } else {
-                        codeBuilder.append("fcmpl\n");
+                        codeBuilder.append("fcmpl\n").append(preTab);
                         comparisonGen(operator.getText());
                     }
                 }
-                case "*" -> codeBuilder.append(typePrefix).append("mul\n");
-                case "/" -> codeBuilder.append(typePrefix).append("div\n");
+                case "*" -> codeBuilder.append(typePrefix).append("mul\n").append(preTab);
+                case "/" -> codeBuilder.append(typePrefix).append("div\n").append(preTab);
                 case "+" -> {
                     if(exprType == DataType.STR) {
                         strConcatGen();
                     } else {
-                        codeBuilder.append(typePrefix).append("add\n");
+                        codeBuilder.append(typePrefix).append("add\n").append(preTab);
                     }
                 }
-                case "-" -> codeBuilder.append(typePrefix).append("sub\n");
+                case "-" -> codeBuilder.append(typePrefix).append("sub\n").append(preTab);
             }
 
         }
     }
 
     private void strConcatGen() {
-        codeBuilder.append("astore ").append(varCounter).append("\n");
-        codeBuilder.append("astore ").append(varCounter+1).append("\n");
+        codeBuilder.append("astore ").append(varCounter).append("\n").append(preTab);
+        codeBuilder.append("astore ").append(varCounter+1).append("\n").append(preTab);
         //solution found on http://www2.cs.uidaho.edu/~jeffery/courses/445/code-jasmin.html 21.01.2023
-        codeBuilder.append("new java/lang/StringBuilder\n")
-                .append("dup\n")
-                .append("invokespecial java/lang/StringBuilder/<init>()V\n")
-                .append("aload ").append(varCounter+1).append("\n")
-                .append("invokevirtual java/lang/StringBuilder/append(Ljava/lang/String;)Ljava/lang/StringBuilder;\n")
-                .append("aload ").append(varCounter).append("\n")
-                .append("invokevirtual java/lang/StringBuilder/append(Ljava/lang/String;)Ljava/lang/StringBuilder;\n")
-                .append("invokevirtual java/lang/StringBuilder/toString()Ljava/lang/String;\n");
+        codeBuilder.append("new java/lang/StringBuilder\n").append(preTab)
+                .append("dup\n").append(preTab)
+                .append("invokespecial java/lang/StringBuilder/<init>()V\n").append(preTab)
+                .append("aload ").append(varCounter+1).append("\n").append(preTab)
+                .append("invokevirtual java/lang/StringBuilder/append(Ljava/lang/String;)Ljava/lang/StringBuilder;\n").append(preTab)
+                .append("aload ").append(varCounter).append("\n").append(preTab)
+                .append("invokevirtual java/lang/StringBuilder/append(Ljava/lang/String;)Ljava/lang/StringBuilder;\n").append(preTab)
+                .append("invokevirtual java/lang/StringBuilder/toString()Ljava/lang/String;\n").append(preTab);
     }
 
     private void comparisonGen(String operator) {
@@ -466,31 +479,31 @@ public class CodeGenerator {
         switch(operator) {
             case "<=", ">=" -> {
                 if(operator.equals("<="))
-                    codeBuilder.append("ifgt skip_true").append(boolCounter).append("\n");
+                    codeBuilder.append("ifgt skip_true").append(boolCounter).append("\n").append(preTab);
                 else
-                    codeBuilder.append("iflt skip_true").append(boolCounter).append("\n");
+                    codeBuilder.append("iflt skip_true").append(boolCounter).append("\n").append(preTab);
                 //load true
-                codeBuilder.append("ldc 1\n");
-                codeBuilder.append("goto skip_false").append(boolCounter).append("\n");
+                codeBuilder.append("ldc 1\n").append(preTab);
+                codeBuilder.append("goto skip_false").append(boolCounter).append("\n").append(preTab);
                 //load false
-                codeBuilder.append("skip_true").append(boolCounter).append(":\n")
-                        .append("ldc 0\n")
-                        .append("skip_false").append(boolCounter).append(":\n");
+                codeBuilder.append("skip_true").append(boolCounter).append(":\n").append(preTab)
+                        .append("ldc 0\n").append(preTab)
+                        .append("skip_false").append(boolCounter).append(":\n").append(preTab);
                 return;
             }
-            case "<" -> codeBuilder.append("iflt true").append(boolCounter).append("\n");
-            case ">" -> codeBuilder.append("ifgt true").append(boolCounter).append("\n");
-            case "==" -> codeBuilder.append("ifeq true").append(boolCounter).append("\n");
-            case "!=" -> codeBuilder.append("ifneq true").append(boolCounter).append("\n");
+            case "<" -> codeBuilder.append("iflt true").append(boolCounter).append("\n").append(preTab);
+            case ">" -> codeBuilder.append("ifgt true").append(boolCounter).append("\n").append(preTab);
+            case "==" -> codeBuilder.append("ifeq true").append(boolCounter).append("\n").append(preTab);
+            case "!=" -> codeBuilder.append("ifneq true").append(boolCounter).append("\n").append(preTab);
         }
         codeBuilder
                 //load false
-                .append("ldc 0\n")
-                .append("goto skip_true").append(boolCounter).append("\n")
-                .append("true").append(boolCounter).append(":\n")
+                .append("ldc 0\n").append(preTab)
+                .append("goto skip_true").append(boolCounter).append("\n").append(preTab)
+                .append("true").append(boolCounter).append(":\n").append(preTab)
                 //load true
-                .append("ldc 1\n")
-                .append("skip_true").append(boolCounter).append(":\n");
+                .append("ldc 1\n").append(preTab)
+                .append("skip_true").append(boolCounter).append(":\n").append(preTab);
     }
 
     private String getTypePrefix(DataType type) {
@@ -506,5 +519,21 @@ public class CodeGenerator {
             }
         }
         return "";
+    }
+
+    private void tabInc() {
+        tabIt++;
+        preTab = "";
+        for(int i = 1; i <= tabIt; i++){
+            preTab += "    ";
+        }
+    }
+
+    private void tabDec(){
+        tabIt--;
+        preTab = "";
+        for(int i = 1; i <= tabIt; i++){
+            preTab += "    ";
+        }
     }
 }
