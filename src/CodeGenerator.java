@@ -235,6 +235,7 @@ public class CodeGenerator {
     }
 
     private void ifStatementGen(AstNode ifNode) {
+        //TODO: bug where func_invoc does not work in ifExpr
         ifElseLabelCounter++;
         ifNestCounter++;
         AstNode ifExpr = ifNode.children().get(0);
@@ -345,23 +346,45 @@ public class CodeGenerator {
             AstNode operator = exprNode.children().get(1);
             //left operand
             exprGen(leftOp);
+            //cast int to float for implicit typecast
+            if(exprType == DataType.FLOAT && leftOp.dataType() == DataType.INT) {
+                codeBuilder.append("i2f\n");
+            }
             //cast int to float for comparison
-            if(operator.nodeType() == AstNodeType.CMP_SMBL && leftOp.dataType() == DataType.INT) {
+            else if(operator.nodeType() == AstNodeType.CMP_SMBL && leftOp.dataType() == DataType.INT) {
                 codeBuilder.append("i2f\n");
             }
             //right operand
             exprGen(rightOp);
+            //cast int to float for implicit typecast
+            if(exprType == DataType.FLOAT && rightOp.dataType() == DataType.INT) {
+                codeBuilder.append("i2f\n");
+            }
             //cast int to float for comparison
-            if(operator.nodeType() == AstNodeType.CMP_SMBL && rightOp.dataType() == DataType.INT) {
+            else if((operator.nodeType() == AstNodeType.CMP_SMBL) && rightOp.dataType() == DataType.INT) {
                 codeBuilder.append("i2f\n");
             }
             switch (operator.getText()) {
                 case "||" -> codeBuilder.append("ior\n");
                 case "&&" -> codeBuilder.append("iand\n");
-                //TODO: string concat
+                case "<=", ">=" -> {
+                    codeBuilder.append("fcmpl\n");
+                    if(operator.getText().equals("<="))
+                        codeBuilder.append("ifgt skip_true").append(boolCounter).append("\n");
+                    else
+                        codeBuilder.append("iflt skip_true").append(boolCounter).append("\n");
+                    //load true
+                    codeBuilder.append("ldc 1\n");
+                    codeBuilder.append("goto skip_false").append(boolCounter).append("\n");
+                    //load false
+                    codeBuilder.append("skip_true").append(boolCounter).append(":\n")
+                            .append("ldc 0\n")
+                            .append("skip_false").append(boolCounter).append(":\n");
+
+                }
                 //fcmpl:
                 //-1 - left kleiner ; 0 - gleich ; 1 - rechts kleiner
-                case "<", ">", "<=", ">=", "==", "!=" -> {
+                case "<", ">", "==", "!=" -> {
                     //string is special >:(
                     if(leftOp.dataType() == DataType.STR) {
                         boolCounter++;
@@ -384,11 +407,32 @@ public class CodeGenerator {
                 }
                 case "*" -> codeBuilder.append(typePrefix).append("mul\n");
                 case "/" -> codeBuilder.append(typePrefix).append("div\n");
-                case "+" -> codeBuilder.append(typePrefix).append("add\n");
+                //TODO: string concat
+                case "+" -> {
+                    if(exprType == DataType.STR) {
+                        strConcatGen();
+                    } else {
+                        codeBuilder.append(typePrefix).append("add\n");
+                    }
+                }
                 case "-" -> codeBuilder.append(typePrefix).append("sub\n");
             }
 
         }
+    }
+
+    private void strConcatGen() {
+        codeBuilder.append("astore ").append(varCounter).append("\n");
+        codeBuilder.append("astore ").append(varCounter+1).append("\n");
+        //solution found on http://www2.cs.uidaho.edu/~jeffery/courses/445/code-jasmin.html 21.01.2023
+        codeBuilder.append("new java/lang/StringBuilder\n")
+                .append("dup\n")
+                .append("invokespecial java/lang/StringBuilder/<init>()V\n")
+                .append("aload ").append(varCounter+1).append("\n")
+                .append("invokevirtual java/lang/StringBuilder/append(Ljava/lang/String;)Ljava/lang/StringBuilder;\n")
+                .append("aload ").append(varCounter).append("\n")
+                .append("invokevirtual java/lang/StringBuilder/append(Ljava/lang/String;)Ljava/lang/StringBuilder;\n")
+                .append("invokevirtual java/lang/StringBuilder/toString()Ljava/lang/String;\n");
     }
 
     private void comparisonGen(String operator) {
@@ -396,13 +440,6 @@ public class CodeGenerator {
         switch(operator) {
             case "<" -> codeBuilder.append("iflt true").append(boolCounter).append("\n");
             case ">" -> codeBuilder.append("ifgt true").append(boolCounter).append("\n");
-            //TODO: fix
-            case "<=" -> codeBuilder.append("dup\n")
-                    .append("iflt true").append(boolCounter).append("\n")
-                    .append("ifeq true").append(boolCounter).append("\n");
-            case ">=" -> codeBuilder.append("dup\n")
-                    .append("ifgt true").append(boolCounter).append("\n")
-                    .append("ifeq true").append(boolCounter).append("\n");
             case "==" -> codeBuilder.append("ifeq true").append(boolCounter).append("\n");
             case "!=" -> codeBuilder.append("ifneq true").append(boolCounter).append("\n");
         }
