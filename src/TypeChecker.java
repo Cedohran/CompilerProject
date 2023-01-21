@@ -137,9 +137,13 @@ public class TypeChecker {
         }
         //compare types of parameters
         for(int i = 0; i < actualParamList.size(); i++) {
+            //FLOAT -> INT cast not possible
+            if(actualParamList.get(i) == DataType.INT && funcInvocParamList.get(i) != DataType.INT) {
+                throw new TypeCheckException("Wrong parameter type at function call "+funcId+"()");
+            }
             //both numbers
             if(numCastPossible(actualParamList.get(i), funcInvocParamList.get(i))) {
-                return;
+                //better to do nothing than return;
             }
             else if(actualParamList.get(i) != funcInvocParamList.get(i)) {
                 throw new TypeCheckException("Wrong parameter type at function call "+funcId+"()");
