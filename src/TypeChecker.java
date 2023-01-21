@@ -84,7 +84,7 @@ public class TypeChecker {
         DataType exprType = exprCheck(varAssignExprNode);
         //TypeSetting
         varAssignNode.setDataType(varType);
-        varAssignExprNode.setDataType(varType);
+        //varAssignExprNode.setDataType(varType);
         //implicit typecast int->float possible
         //check typecast
         if(varType==DataType.FLOAT && numCastPossible(varType, exprType)) {
