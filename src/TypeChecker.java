@@ -85,7 +85,7 @@ public class TypeChecker {
         //TypeSetting
         varAssignNode.setDataType(varType);
         varAssignExprNode.setDataType(varType);
-        //implicit typecast int->float
+        //implicit typecast int->float possible
         //check typecast
         if(varType==DataType.FLOAT && numCastPossible(varType, exprType)) {
             return DataType.FLOAT;
@@ -176,8 +176,9 @@ public class TypeChecker {
         if(!funcReturnNode.children().isEmpty()) {
             retExprType = exprCheck(funcReturnNode.children().get(0));
         }
-        //check int float cast
-        if(numCastPossible(retExprType, funcRetType)) {
+        //implicit typecast int->float possible
+        //check typecast
+        if(funcRetType==DataType.FLOAT && numCastPossible(funcRetType, retExprType)) {
             return;
         }
         if(retExprType != funcRetType) {
