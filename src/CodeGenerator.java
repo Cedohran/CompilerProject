@@ -20,8 +20,11 @@ public class CodeGenerator {
     int forLoopNestCounter = -1;
     //counter for boolean values (eg. comparisons)
     int boolCounter = 0;
-    //help
-    String prevNodeText = "";
+
+    //string format stuff
+    String preTab = "    ";
+    int tabIt = 1;
+
 
     CodeGenerator(AstNode root, SymbolTableCreator symbolTableCreator, String className) {
         this.ast = root;
@@ -89,7 +92,6 @@ public class CodeGenerator {
             case "if_statement" -> elseSkip();
             case "for_loop" -> forLoopEnd();
         }
-        prevNodeText = node.getText();
     }
 
 
@@ -99,13 +101,15 @@ public class CodeGenerator {
         if(funcId.equals("main")) {
             //skip args param
             varCounter = 1;
-            codeBuilder.append(";\n" +
-                    "; main()\n" +
-                    ";\n" +
-                    ".method public static main([Ljava/lang/String;)V\n" +
-                    "    ; set limits used by this method\n" +
-                    "    .limit locals 255\n" +
-                    "    .limit stack 255\n");
+            codeBuilder.append("""
+                    ;
+                    ; main()
+                    ;
+                    .method public static main([Ljava/lang/String;)V
+                        ; set limits used by this method
+                        .limit locals 255
+                        .limit stack 255
+                    """);
         } else {
             String paramString = getFuncParams(funcId);
             String returnType = getFuncReturnTypeAsString(funcId);
@@ -131,12 +135,17 @@ public class CodeGenerator {
     }
 
     private void funcReturnGen(AstNode funcReturnNode){
+        AstNode returnExpr = new AstNode();
         if(funcReturnNode.hasChild()) {
-            AstNode returnExpr = funcReturnNode.children().get(0);
+            returnExpr = funcReturnNode.children().get(0);
             exprGen(returnExpr);
         }
         if(symbolTable.symbolTableFuncReturn.get(currentFunc) != null) {
             DataType retType = symbolTable.symbolTableFuncReturn.get(currentFunc);
+            //cast
+            if(retType == DataType.FLOAT && returnExpr.dataType() == DataType.INT){
+                codeBuilder.append("i2f\n");
+            }
             String retTypePrefix = getTypePrefix(retType);
             //return
             codeBuilder.append(retTypePrefix).append("return\n");
@@ -147,13 +156,30 @@ public class CodeGenerator {
         String funcId = funcInvocNode.children().get(0).getText();
         AstNode invocParamNode = new AstNode();
         String invocParams = getFuncParams(funcId);
+        List<DataType> funcParamTypes = symbolTable.symbolTableFuncParamType.get(funcId);
+        int i = 0;
         //check params and generate param code
         if(funcInvocNode.children().size() == 2) {
             invocParamNode = funcInvocNode.children().get(1);
             exprGen(invocParamNode.children().get(0));
+            if(funcParamTypes != null) {
+                //cast
+                if(funcParamTypes.get(i) == DataType.FLOAT && invocParamNode.children().get(0).dataType() == DataType.INT){
+                    codeBuilder.append("i2f\n");
+                }
+                i++;
+            }
             while(invocParamNode.children().size() == 2) {
                 invocParamNode = invocParamNode.children().get(1);
                 exprGen(invocParamNode.children().get(0));
+                //cast
+                if(funcParamTypes != null) {
+                    //cast
+                    if(funcParamTypes.get(i) == DataType.FLOAT && invocParamNode.children().get(0).dataType() == DataType.INT){
+                        codeBuilder.append("i2f\n");
+                    }
+                    i++;
+                }
             }
             //reset node
             invocParamNode = funcInvocNode.children().get(1);
@@ -177,8 +203,8 @@ public class CodeGenerator {
                     .append("(").append(invocParams).append(")")
                     .append(getFuncReturnTypeAsString(funcId)).append("\n");
         }
-
-
+        //invoc done -> delete for later
+        funcInvocNode.setText("done_invoc");
     }
 
     private String getFuncParams(String funcId) {
@@ -222,18 +248,6 @@ public class CodeGenerator {
             }
         }
         return "V";
-    }
-
-    private void varAssignGen(AstNode assignNode) {
-        DataType assignType = assignNode.dataType();
-        String typePrefix = getTypePrefix(assignType);
-
-        String varId = assignNode.children().get(0).getText();
-        AstNode varExprNode = assignNode.children().get(1);
-        exprGen(varExprNode);
-        codeBuilder.append(typePrefix).append("store ")
-                .append(varToIdTable.get(currentFunc+varId))
-                .append("\n");
     }
 
     private void ifStatementGen(AstNode ifNode) {
@@ -294,13 +308,34 @@ public class CodeGenerator {
         varToIdTable.put(currentFunc+varId, varCounter);
         AstNode varExprNode = varInitNode.children().get(2);
         exprGen(varExprNode);
+        //cast
+        if(varInitType == DataType.FLOAT && varExprNode.dataType() == DataType.INT){
+            codeBuilder.append("i2f\n");
+        }
         codeBuilder.append(typePrefix).append("store ")
                 .append(varToIdTable.get(currentFunc+varId))
                 .append("\n");
         varCounter++;
     }
 
+    private void varAssignGen(AstNode assignNode) {
+        DataType assignType = assignNode.dataType();
+        String typePrefix = getTypePrefix(assignType);
+
+        String varId = assignNode.children().get(0).getText();
+        AstNode varExprNode = assignNode.children().get(1);
+        exprGen(varExprNode);
+        //cast
+        if(assignType == DataType.FLOAT && varExprNode.dataType() == DataType.INT){
+            codeBuilder.append("i2f\n");
+        }
+        codeBuilder.append(typePrefix).append("store ")
+                .append(varToIdTable.get(currentFunc+varId))
+                .append("\n");
+    }
+
     private void exprGen(AstNode exprNode) {
+        //TODO: func_invoc casts + var_assign casts
         DataType exprType = exprNode.dataType();
         String typePrefix = getTypePrefix(exprType);
         //func_invoc
@@ -399,7 +434,6 @@ public class CodeGenerator {
                 }
                 case "*" -> codeBuilder.append(typePrefix).append("mul\n");
                 case "/" -> codeBuilder.append(typePrefix).append("div\n");
-                //TODO: string concat
                 case "+" -> {
                     if(exprType == DataType.STR) {
                         strConcatGen();
