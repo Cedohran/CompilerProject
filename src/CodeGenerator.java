@@ -12,7 +12,8 @@ public class CodeGenerator {
     //TODO: counter for each function?
     private int varCounter = 0;
     //if else label counters (starts at: 1)
-    int ifElseCounter = -1;
+    int ifElseCounter = 0;
+    int ifElseTemp = 0;
     int ifNestedCounter = 0;
     //for loop
     int forLoopCounter = -1;
@@ -253,7 +254,7 @@ public class CodeGenerator {
 
     private void ifStatementGen(AstNode ifNode) {
         ifNestedCounter++;
-        ifElseCounter++;
+        ifElseTemp++;
         AstNode ifExpr = ifNode.children().get(0);
         exprGen(ifExpr);
         //is there an else?
@@ -286,6 +287,10 @@ public class CodeGenerator {
         //the else skip goto jump 3000
         codeBuilder.append("else_skip").append(ifNestedCounter+ifElseCounter).append(":\n");
         ifNestedCounter--;
+        if(ifNestedCounter == 0) {
+            ifElseCounter += ifElseTemp;
+            ifElseTemp = 0;
+        }
         tabDec();
         codeBuilder.append(preTab);
     }
