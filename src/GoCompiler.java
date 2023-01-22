@@ -141,10 +141,10 @@ public class GoCompiler {
             writer.close();
             System.out.println("Jasmin bytecode generated: "+jasminFile.getPath());
             //compile to java bytecode
-            String toJavaByteCode = "java -jar jasmin.jar "+jasminFile.getPath()+" -d ./compiled_code";
+            String toJavaByteCode = "java -jar ./lib/jasmin.jar "+jasminFile.getPath()+" -d ./compiled_code";
             System.out.println("executing: "+toJavaByteCode);
             Runtime rt = Runtime.getRuntime();
-            Process pr = rt.exec(toJavaByteCode);
+            Process pr = rt.exec(toJavaByteCode.split(" "));
             pr.waitFor();
             System.out.println("Java bytecode generated: ./compiled_code/"+jasminFileName+".class");
         }
