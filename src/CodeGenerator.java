@@ -16,7 +16,8 @@ public class CodeGenerator {
     int ifElseTemp = 0;
     int ifNestedCounter = 0;
     //for loop
-    int forLoopCounter = -1;
+    int forLoopCounter = 0;
+    int forLoopTemp = 0;
     int forLoopNestedCounter = 0;
     //counter for boolean values (eg. comparisons)
     int boolCounter = 0;
@@ -296,8 +297,8 @@ public class CodeGenerator {
     }
 
     private void forLoopGen(AstNode forLoopNode) {
-        forLoopCounter++;
         forLoopNestedCounter++;
+        forLoopTemp++;
         codeBuilder.append("for_start").append(forLoopNestedCounter + forLoopCounter).append(":\n").append(preTab);
         AstNode forExpr = forLoopNode.children().get(0);
         exprGen(forExpr);
@@ -313,6 +314,10 @@ public class CodeGenerator {
         codeBuilder.append("goto for_start").append(forLoopNestedCounter + forLoopCounter).append("\n").append(preTab);
         codeBuilder.append("for_end").append(forLoopNestedCounter + forLoopCounter).append(":\n");
         forLoopNestedCounter--;
+        if(forLoopNestedCounter == 0) {
+            forLoopCounter += forLoopTemp;
+            forLoopTemp = 0;
+        }
         tabDec();
         codeBuilder.append(preTab);
     }
