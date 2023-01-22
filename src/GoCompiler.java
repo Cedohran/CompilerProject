@@ -112,11 +112,19 @@ public class GoCompiler {
             System.err.println(e.getMessage());
             System.exit(1);
         }
-
         System.out.println("Parsing and Typechecking success.");
         System.out.println();
 
-        //TODO: Kontrollflussanalyse
+        //flow control
+        FlowControlChecker flowControlChecker = new FlowControlChecker(typecheckedTree, symbolTableCreator);
+        try {
+            flowControlChecker.check();
+        } catch (FlowControlException e) {
+            System.err.println(e.getMessage());
+            System.exit(1);
+        }
+        System.out.println("Flow control success.");
+        System.out.println();
 
         //code generation
         if(isCompile) {
