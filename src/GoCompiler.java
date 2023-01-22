@@ -7,10 +7,12 @@ import org.apache.commons.cli.*;
 import org.apache.commons.cli.ParseException;
 
 import java.io.*;
+import java.util.Map;
 
 public class GoCompiler {
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
         String goFile = "";
+        String jasminFileName = "";
         boolean printAST = false;
         boolean isCompile = false, isLiveness = false;
 
@@ -39,6 +41,7 @@ public class GoCompiler {
             commandLine = argParser.parse(options, args);
             if (commandLine.hasOption("compile")) {
                 goFile = commandLine.getOptionValue("compile");
+                jasminFileName = goFile.split("\\.")[0];
                 isCompile = true;
             } else if (commandLine.hasOption("liveness")) {
                 goFile = commandLine.getOptionValue("liveness");
@@ -110,19 +113,46 @@ public class GoCompiler {
             System.exit(1);
         }
 
-        System.out.println("Parsing success.");
-        System.out.println("Typechecking success.");
+        System.out.println("Parsing and Typechecking success.");
+        System.out.println();
 
         //TODO: Kontrollflussanalyse
 
-        //Codegen
-        CodeGenerator codeGenerator = new CodeGenerator(typecheckedTree, symbolTableCreator, "MyGen");
-        String jasminCode = codeGenerator.code();
-        //write code to file
-        FileWriter writer = new FileWriter("./jasmin/MyGen.j");
-        writer.write(jasminCode);
-        writer.close();
-        //System.out.println(jasminCode);
+        //code generation
+        if(isCompile) {
+            //generate jasmin bytecode
+            CodeGenerator codeGenerator = new CodeGenerator(typecheckedTree, symbolTableCreator, jasminFileName);
+            String jasminCode = codeGenerator.code();
+            //generate directory + file
+            new File("./compiled_code").mkdir();
+            File jasminFile = new File("./compiled_code/"+jasminFileName+".j");
+            jasminFile.createNewFile();
+            //write jasmin bytecode to file
+            FileWriter writer = new FileWriter(jasminFile);
+            writer.write(jasminCode);
+            writer.close();
+            System.out.println("Jasmin bytecode generated: "+jasminFile.getPath());
+            //compile to java bytecode
+            String toJavaByteCode = "java -jar jasmin.jar "+jasminFile.getPath()+" -d ./compiled_code";
+            System.out.println("executing: "+toJavaByteCode);
+            Runtime rt = Runtime.getRuntime();
+            Process pr = rt.exec(toJavaByteCode);
+            pr.waitFor();
+            System.out.println("Java bytecode generated: ./compiled_code/"+jasminFileName+".class");
+        }
+
+        if(isLiveness) {
+            System.out.println("Ouch! This feature is yet to be fully implemented! Our highly intelligent monkeys are working on it!");
+            int maxVarSum = 0;
+            for(Map.Entry<String, Map<String, DataType>> entry : symbolTableCreator.funcScopeTable.entrySet()) {
+                int prevSum = maxVarSum;
+                maxVarSum = entry.getValue().size();
+                if(prevSum > maxVarSum)
+                    maxVarSum = prevSum;
+            }
+            int registerCount = (maxVarSum+1) / 2;
+            System.out.println("In the meantime, here is an educated guess:\nRegisters: "+registerCount);
+        }
 
         //optional AST to std.out
         if(printAST) {
