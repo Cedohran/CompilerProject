@@ -12,12 +12,11 @@ public class CodeGenerator {
     //TODO: counter for each function?
     private int varCounter = 0;
     //if else label counters (starts at: 1)
-    int ifElseLabelCounter = 0;
-    //if nest counter
-    int ifNestCounter = -1;
+    int ifElseCounter = -1;
+    int ifNestedCounter = 0;
     //for loop
-    int forLoopLabelCounter = 0;
-    int forLoopNestCounter = -1;
+    int forLoopCounter = -1;
+    int forLoopNestedCounter = 0;
     //counter for boolean values (eg. comparisons)
     int boolCounter = 0;
 
@@ -253,20 +252,20 @@ public class CodeGenerator {
     }
 
     private void ifStatementGen(AstNode ifNode) {
-        ifElseLabelCounter++;
-        ifNestCounter++;
+        ifNestedCounter++;
+        ifElseCounter++;
         AstNode ifExpr = ifNode.children().get(0);
         exprGen(ifExpr);
         //is there an else?
         if(ifNode.children().size() == 3) {
             //check if ifExpr is false -> jump to else
             codeBuilder.append("ldc 0\n").append(preTab);
-            codeBuilder.append("if_icmpeq else").append(ifElseLabelCounter).append("\n");
+            codeBuilder.append("if_icmpeq else").append(ifNestedCounter+ifElseCounter).append("\n");
         } //no else
         else {
             //check if ifExpr is false -> jump to else_skip
             codeBuilder.append("ldc 0\n").append(preTab);
-            codeBuilder.append("if_icmpeq else_skip").append(ifElseLabelCounter).append("\n");
+            codeBuilder.append("if_icmpeq else_skip").append(ifNestedCounter+ifElseCounter).append("\n");
         }
         tabInc();
         codeBuilder.append(preTab);
@@ -274,41 +273,41 @@ public class CodeGenerator {
 
     private void elseGen() {
         //add else-skip for previous if
-        codeBuilder.append("goto else_skip").append(ifElseLabelCounter).append("\n");
+        codeBuilder.append("goto else_skip").append(ifNestedCounter+ifElseCounter).append("\n");
         tabDec();
         codeBuilder.append(preTab);
         //add else label for previous if goto
-        codeBuilder.append("else").append(ifElseLabelCounter).append(":\n");
+        codeBuilder.append("else").append(ifNestedCounter+ifElseCounter).append(":\n");
         tabInc();
         codeBuilder.append(preTab);
     }
 
     private void elseSkip() {
         //the else skip goto jump 3000
-        codeBuilder.append("else_skip").append(ifElseLabelCounter).append(":\n");
-        ifElseLabelCounter--;
+        codeBuilder.append("else_skip").append(ifNestedCounter+ifElseCounter).append(":\n");
+        ifNestedCounter--;
         tabDec();
         codeBuilder.append(preTab);
     }
 
     private void forLoopGen(AstNode forLoopNode) {
-        forLoopLabelCounter++;
-        forLoopNestCounter++;
-        codeBuilder.append("for_start").append(forLoopLabelCounter).append(":\n").append(preTab);
+        forLoopCounter++;
+        forLoopNestedCounter++;
+        codeBuilder.append("for_start").append(forLoopNestedCounter + forLoopCounter).append(":\n").append(preTab);
         AstNode forExpr = forLoopNode.children().get(0);
         exprGen(forExpr);
         //check if forExpr is false -> skip loop body
         codeBuilder.append("ldc 0\n").append(preTab);
-        codeBuilder.append("if_icmpeq for_end").append(forLoopLabelCounter).append("\n");
+        codeBuilder.append("if_icmpeq for_end").append(forLoopNestedCounter + forLoopCounter).append("\n");
         tabInc();
         codeBuilder.append(preTab);
     }
 
     private void forLoopEnd() {
         //the for loop skip goto jump 3000
-        codeBuilder.append("goto for_start").append(forLoopLabelCounter).append("\n").append(preTab);
-        codeBuilder.append("for_end").append(forLoopLabelCounter-forLoopNestCounter).append(":\n");
-        forLoopNestCounter--;
+        codeBuilder.append("goto for_start").append(forLoopNestedCounter + forLoopCounter).append("\n").append(preTab);
+        codeBuilder.append("for_end").append(forLoopNestedCounter + forLoopCounter).append(":\n");
+        forLoopNestedCounter--;
         tabDec();
         codeBuilder.append(preTab);
     }
