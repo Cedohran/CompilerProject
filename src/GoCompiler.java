@@ -8,6 +8,7 @@ import org.apache.commons.cli.ParseException;
 
 import java.io.*;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class GoCompiler {
     public static void main(String[] args) throws IOException, InterruptedException {
@@ -146,7 +147,13 @@ public class GoCompiler {
             Runtime rt = Runtime.getRuntime();
             Process pr = rt.exec(toJavaByteCode.split(" "));
             pr.waitFor();
-            System.out.println("Java bytecode generated: ./compiled_code/"+jasminFileName+".class");
+            //java bytecode error handling
+            String prError = pr.errorReader().lines().map(s -> s + "\n").collect(Collectors.joining());
+            if(prError.equals("")) {
+                System.out.println("Java bytecode generated: ./compiled_code/" + jasminFileName + ".class");
+            } else {
+                System.err.println("Java bytecode generation failed:\n"+prError);
+            }
         }
 
         if(isLiveness) {
