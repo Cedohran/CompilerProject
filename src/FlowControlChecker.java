@@ -4,6 +4,7 @@ public class FlowControlChecker {
             stdReturn = false,
             inIf = false,
             inElse = false,
+            inFor = false,
             deepSearchSkip = false;
 
     private final AstNode ast;
@@ -41,6 +42,7 @@ public class FlowControlChecker {
                 inIf = true;
             }
             case "else_statement" -> inElse = true;
+            case "for_loop" -> inFor = true;
             case "func_return" -> {
                 if(inElse) {
                     //if + else contain return
@@ -49,7 +51,7 @@ public class FlowControlChecker {
                     }
                 } else if(inIf) {
                     ifReturn = true;
-                } else {
+                } else if(!inFor){
                     stdReturn = true;
                 }
             }
@@ -66,6 +68,7 @@ public class FlowControlChecker {
                 inElse = false;
                 ifReturn = false;
             }
+            case "for_loop" -> inFor = false;
             case "func" -> {
                 //void no return needed
                 if(symbolTable.symbolTableFuncReturn.get(node.children().get(0).getText()) != DataType.UNDEF) {
