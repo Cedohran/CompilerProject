@@ -1,8 +1,9 @@
 Java version: 19.0.1 (openJDK), ANTLR version: 4.11.1, OS: Win10,
 
 Jasmin version: http://jasmin.sourceforge.net/ (13.01.2023)
-###how to execute:
 
+
+how to execute:
 
 1. ANTLR
    java -jar ./lib/antlr-4.11.1-complete.jar GoLexer.g4
