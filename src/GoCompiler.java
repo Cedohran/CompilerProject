@@ -41,7 +41,7 @@ public class GoCompiler {
             commandLine = argParser.parse(options, args);
             if (commandLine.hasOption("compile")) {
                 goFile = commandLine.getOptionValue("compile");
-                jasminFileName = goFile.split("\\.")[0];
+                jasminFileName = goFile.split("/")[goFile.split("/").length-1].split("\\.")[0];
                 isCompile = true;
             } else if (commandLine.hasOption("liveness")) {
                 goFile = commandLine.getOptionValue("liveness");
