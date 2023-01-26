@@ -170,7 +170,7 @@ public class StupsCompiler {
 
         //compile to java bytecode
         if(toJb) {
-            if(jasminFile != null) {
+            if(jasminFile == null) {
                 System.err.println("Java bytecode compilation error:\n.j file not found");
                 System.exit(1);
             }
