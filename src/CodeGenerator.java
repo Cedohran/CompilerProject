@@ -9,7 +9,6 @@ public class CodeGenerator {
     private AstNode ast;
     //Map for variables to ID (starts at: 1)
     private Map<String, Integer> varToIdTable = new HashMap<>();
-    //TODO: counter for each function?
     private int varCounter = 0;
     //if else label counters (starts at: 1)
     int ifElseCounter = 0;
@@ -21,6 +20,9 @@ public class CodeGenerator {
     int forLoopNestedCounter = 0;
     //counter for boolean values (eg. comparisons)
     int boolCounter = 0;
+
+    //modulo
+    int modCounter = 0;
 
     //string format stuff
     String preTab = "";
@@ -357,7 +359,6 @@ public class CodeGenerator {
     }
 
     private void exprGen(AstNode exprNode) {
-        //TODO: func_invoc casts + var_assign casts
         DataType exprType = exprNode.dataType();
         String typePrefix = getTypePrefix(exprType);
         //func_invoc
@@ -391,17 +392,26 @@ public class CodeGenerator {
         }
         //unary operator
         else if(exprNode.children().size() == 2) {
-            //!true - 0 ; !false - 1
+            //generate expression
+            exprGen(exprNode.children().get(1));
+            //negate it
+            //!true  0 ; !false  1
             if(exprType == DataType.BOOL) {
-                switch (exprNode.getText()) {
-                    case "false" -> codeBuilder.append("ldc 1\n").append(preTab);
-                    case "true" -> codeBuilder.append("ldc 0\n").append(preTab);
-                }
+                boolCounter++;
+                //load 0 to negate
+                codeBuilder.append("ldc 0\n").append(preTab);
+                //if 0 -> 1, 1 -> 0
+                codeBuilder.append("if_icmpeq true").append(boolCounter).append("\n").append(preTab);
+                //load false
+                codeBuilder.append("ldc 0\n").append(preTab)
+                        .append("goto skip_true").append(boolCounter).append("\n").append(preTab)
+                        .append("true").append(boolCounter).append(":\n").append(preTab)
+                        //load true
+                        .append("ldc 1\n").append(preTab)
+                        .append("skip_true").append(boolCounter).append(":\n").append(preTab);
+            } else if (exprNode.children().get(0).getText().equals("-")){
+                codeBuilder.append(typePrefix).append("neg\n").append(preTab);
             }
-            codeBuilder.append("ldc ")
-                    .append(exprNode.children().get(0).getText())
-                    .append(exprNode.children().get(1).getText())
-                    .append("\n").append(preTab);
         }
         //operator
         else if(exprNode.children().size() == 3) {
@@ -410,22 +420,22 @@ public class CodeGenerator {
             AstNode operator = exprNode.children().get(1);
             //left operand
             exprGen(leftOp);
-            //cast int to float for implicit typecast
-            if(exprType == DataType.FLOAT && leftOp.dataType() == DataType.INT) {
+            //cast int (or bool) to float for implicit typecast
+            if(exprType == DataType.FLOAT && (leftOp.dataType() == DataType.INT || leftOp.dataType() == DataType.BOOL)) {
                 codeBuilder.append("i2f\n").append(preTab);
             }
-            //cast int to float for comparison
-            else if(operator.nodeType() == AstNodeType.CMP_SMBL && leftOp.dataType() == DataType.INT) {
+            //cast int (or bool) to float for comparison
+            else if(operator.nodeType() == AstNodeType.CMP_SMBL && (leftOp.dataType() == DataType.INT || leftOp.dataType() == DataType.BOOL)) {
                 codeBuilder.append("i2f\n").append(preTab);
             }
             //right operand
             exprGen(rightOp);
-            //cast int to float for implicit typecast
-            if(exprType == DataType.FLOAT && rightOp.dataType() == DataType.INT) {
+            //cast int (or bool) to float for implicit typecast
+            if(exprType == DataType.FLOAT && (rightOp.dataType() == DataType.INT || rightOp.dataType() == DataType.BOOL)) {
                 codeBuilder.append("i2f\n").append(preTab);
             }
-            //cast int to float for comparison
-            else if((operator.nodeType() == AstNodeType.CMP_SMBL) && rightOp.dataType() == DataType.INT) {
+            //cast int (or bool) to float for comparison
+            else if((operator.nodeType() == AstNodeType.CMP_SMBL) && (rightOp.dataType() == DataType.INT || rightOp.dataType() == DataType.BOOL)) {
                 codeBuilder.append("i2f\n").append(preTab);
             }
             switch (operator.getText()) {
@@ -456,6 +466,37 @@ public class CodeGenerator {
                 }
                 case "*" -> codeBuilder.append(typePrefix).append("mul\n").append(preTab);
                 case "/" -> codeBuilder.append(typePrefix).append("div\n").append(preTab);
+                case "%" -> {
+                    modCounter++;
+                    //store both operands
+                    //right
+                    codeBuilder.append(typePrefix).append("store ").append(varCounter+2).append("\n").append(preTab);
+                    //left
+                    codeBuilder.append(typePrefix).append("store ").append(varCounter+1).append("\n").append(preTab);
+
+                    //mod_loop
+                    codeBuilder.append("mod_loop").append(modCounter).append(":\n").append(preTab);
+                    codeBuilder.append(typePrefix).append("load ").append(varCounter+1).append("\n").append(preTab);
+                    codeBuilder.append("i2f\n").append(preTab);
+                    codeBuilder.append(typePrefix).append("load ").append(varCounter+2).append("\n").append(preTab);
+                    codeBuilder.append("i2f\n").append(preTab);
+                    //comparison
+                    codeBuilder.append("fcmpl\n").append(preTab);
+                    comparisonGen(">=");
+                    codeBuilder.append("ldc 0\n").append(preTab);
+                    codeBuilder.append("if_icmpeq skip_loop").append(modCounter).append("\n").append(preTab);
+                    //subtract from left
+                    codeBuilder.append(typePrefix).append("load ").append(varCounter+1).append("\n").append(preTab);
+                    codeBuilder.append(typePrefix).append("load ").append(varCounter+2).append("\n").append(preTab);
+                    codeBuilder.append(typePrefix).append("sub\n").append(preTab);
+                    //store in left
+                    codeBuilder.append(typePrefix).append("store ").append(varCounter+1).append("\n").append(preTab);
+                    //loop
+                    codeBuilder.append("goto mod_loop").append(modCounter).append("\n").append(preTab);
+                    codeBuilder.append("skip_loop").append(modCounter).append(":\n").append(preTab);
+                    //rest of mod is in left
+                    codeBuilder.append(typePrefix).append("load ").append(varCounter+1).append("\n").append(preTab);
+                }
                 case "+" -> {
                     if(exprType == DataType.STR) {
                         strConcatGen();
@@ -503,7 +544,7 @@ public class CodeGenerator {
             case "<" -> codeBuilder.append("iflt true").append(boolCounter).append("\n").append(preTab);
             case ">" -> codeBuilder.append("ifgt true").append(boolCounter).append("\n").append(preTab);
             case "==" -> codeBuilder.append("ifeq true").append(boolCounter).append("\n").append(preTab);
-            case "!=" -> codeBuilder.append("ifneq true").append(boolCounter).append("\n").append(preTab);
+            case "!=" -> codeBuilder.append("ifne true").append(boolCounter).append("\n").append(preTab);
         }
         codeBuilder
                 //load false
