@@ -1,6 +1,6 @@
 Java version: 19.0.1 (openJDK), ANTLR version: 4.11.1, OS: Win10,
 
-Jasmin version: http://jasmin.sourceforge.net/ (13.01.2023)
+Jasmin version: 2.4
 
 
 how to execute:
@@ -13,9 +13,14 @@ how to execute:
    javac *.java -d ./out/ -cp ./lib/*;.
 
 3. run Java
-   java -cp ./lib/*;.;./out/ GoCompiler -compile [path to .go file] -ast(optional)
+   java -cp ./lib/*;.;./out/ StupsCompiler -compile [path to .go file] -jb(optional) -ast(optional)
 
 WIP:
-java -cp ./lib/*;.;./out/ GoCompiler -liveness [path to .go file] -ast(optional)
+java -cp ./lib/*;.;./out/ StupsCompiler -liveness [path to .go file]
 
-(-ast: print the AST to std out)
+Arguments:
+-jb: compiliert direkt den Java Bytecode
+-ast: gibt den AST aus
+
+Wo die .j (ggf. auch .class) Datei landet:
+Gleiches Verzeichnis wie die .go Datei

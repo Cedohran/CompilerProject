@@ -10,12 +10,14 @@ import java.io.*;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class GoCompiler {
+public class StupsCompiler {
     public static void main(String[] args) throws IOException, InterruptedException {
         String goFile = "";
         String jasminFileName = "";
+        String outputDir = "";
         boolean printAST = false;
         boolean isCompile = false, isLiveness = false;
+        boolean toJb = false;
 
         //parse commandline arguments
         CommandLine commandLine;
@@ -29,6 +31,10 @@ public class GoCompiler {
                 .desc("liveness")
                 .hasArg()
                 .build();
+        Option option_toJb = Option.builder("jb")
+                .required(false)
+                .desc("Compile to Java Bytecode")
+                .build();
         Option option_ast = Option.builder("ast")
                 .required(false)
                 .desc("Print AST")
@@ -37,18 +43,24 @@ public class GoCompiler {
         CommandLineParser argParser = new DefaultParser();
         options.addOption(option_compile);
         options.addOption(option_liveness);
+        options.addOption(option_toJb);
         options.addOption(option_ast);
         try {
             commandLine = argParser.parse(options, args);
             if (commandLine.hasOption("compile")) {
                 goFile = commandLine.getOptionValue("compile");
                 jasminFileName = goFile.split("/")[goFile.split("/").length-1].split("\\.")[0];
+                int goFileNameLength = goFile.split("/")[goFile.split("/").length-1].length();
+                outputDir = goFile.substring(0, goFile.length()-goFileNameLength);
                 isCompile = true;
             } else if (commandLine.hasOption("liveness")) {
                 goFile = commandLine.getOptionValue("liveness");
                 isLiveness = true;
             } else {
                 throw new ParseException("Missing compile/liveness argument");
+            }
+            if(commandLine.hasOption("jb")) {
+                toJb = true;
             }
             if (commandLine.hasOption("ast")) {
                 printAST = true;
@@ -128,32 +140,19 @@ public class GoCompiler {
         System.out.println();
 
         //code generation
+        File jasminFile = null;
         if(isCompile) {
             //generate jasmin bytecode
             CodeGenerator codeGenerator = new CodeGenerator(typecheckedTree, symbolTableCreator, jasminFileName);
             String jasminCode = codeGenerator.code();
-            //generate directory + file
-            new File("./compiled_code").mkdir();
-            File jasminFile = new File("./compiled_code/"+jasminFileName+".j");
+            //generate file
+            jasminFile = new File(outputDir+jasminFileName+".j");
             jasminFile.createNewFile();
             //write jasmin bytecode to file
             FileWriter writer = new FileWriter(jasminFile);
             writer.write(jasminCode);
             writer.close();
             System.out.println("Jasmin bytecode generated: "+jasminFile.getPath());
-            //compile to java bytecode
-            String toJavaByteCode = "java -jar ./lib/jasmin.jar "+jasminFile.getPath()+" -d ./compiled_code";
-            System.out.println("executing: "+toJavaByteCode);
-            Runtime rt = Runtime.getRuntime();
-            Process pr = rt.exec(toJavaByteCode.split(" "));
-            pr.waitFor();
-            //java bytecode error handling
-            String prError = pr.errorReader().lines().map(s -> s + "\n").collect(Collectors.joining());
-            if(prError.equals("")) {
-                System.out.println("Java bytecode generated: ./compiled_code/" + jasminFileName + ".class");
-            } else {
-                System.err.println("Java bytecode generation failed:\n"+prError);
-            }
         }
 
         if(isLiveness) {
@@ -167,6 +166,26 @@ public class GoCompiler {
             }
             int registerCount = (maxVarSum+1) / 2;
             System.out.println("In the meantime, here is an educated guess:\nRegisters: "+registerCount);
+        }
+
+        //compile to java bytecode
+        if(toJb) {
+            if(jasminFile != null) {
+                System.err.println("Java bytecode compilation error:\n.j file not found");
+                System.exit(1);
+            }
+            String toJavaByteCode = "java -jar ./lib/jasmin.jar "+jasminFile.getPath()+" -d "+outputDir;
+            System.out.println("executing: "+toJavaByteCode);
+            Runtime rt = Runtime.getRuntime();
+            Process pr = rt.exec(toJavaByteCode.split(" "));
+            pr.waitFor();
+            //java bytecode error handling
+            String prError = pr.errorReader().lines().map(s -> s + "\n").collect(Collectors.joining());
+            if(prError.equals("")) {
+                System.out.println("Java bytecode generated: ./compiled_code/" + jasminFileName + ".class");
+            } else {
+                System.err.println("Java bytecode generation failed:\n"+prError);
+            }
         }
 
         //optional AST to std.out
